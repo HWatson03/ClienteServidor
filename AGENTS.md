@@ -11,7 +11,7 @@ This is a monorepo. The Spring Boot backend is in `backend/`: production code is
 - `cd backend && ./mvnw spring-boot:run` starts the backend locally.
 - `cd backend && ./mvnw clean` removes generated files under `backend/target/`.
 
-Use the backend wrapper rather than relying on a locally installed Maven version. The backend uses Spring Data JPA, Spring Security, Spring MVC, and SQLite at runtime; verify related configuration when changing persistence or HTTP behavior.
+Use the backend wrapper rather than relying on a locally installed Maven version. The backend uses Spring Data JPA, Spring Security, Spring MVC, and PostgreSQL at runtime; verify related configuration when changing persistence or HTTP behavior.
 
 ## Coding Style & Naming Conventions
 
@@ -23,7 +23,7 @@ Backend tests use JUnit through Spring Boot's test dependencies. Name test class
 
 ## Commit & Pull Request Guidelines
 
-Write concise imperative commit subjects, for example `Add customer lookup endpoint`. Pull requests should describe the behavior changed, note relevant configuration or data effects, link related issues when applicable, and include test results. Add screenshots only when a change affects a user-facing interface.
+Write commit subjects in Spanish, using concise imperative phrasing, for example `Agregar búsqueda de clientes`. Pull requests should describe the behavior changed, note relevant configuration or data effects, link related issues when applicable, and include test results. Add screenshots only when a change affects a user-facing interface.
 
 ## Security & Configuration Tips
 

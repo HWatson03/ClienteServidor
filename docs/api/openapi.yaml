@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: ClienteServidor API
+  description: API de nube privada multiusuario
+  version: 0.0.1
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/auth/registro:
+    post:
+      tags: [Identidad]
+      summary: Registro de usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroRequest'
+      responses:
+        '201':
+          description: Registrado
+        '400':
+          description: Solicitud inválida
+  /api/auth/login:
+    post:
+      tags: [Identidad]
+      summary: Inicio de sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada
+        '401':
+          description: Credenciales inválidas
+components:
+  schemas:
+    RegistroRequest:
+      type: object
+      required: [nombreUsuario, contrasena]
+      properties:
+        nombreUsuario:
+          type: string
+        contrasena:
+          type: string
+    LoginRequest:
+      type: object
+      required: [nombreUsuario, contrasena]
+      properties:
+        nombreUsuario:
+          type: string
+        contrasena:
+          type: string
+    ApiError:
+      type: object
+      properties:
+        codigo:
+          type: string
+        mensaje:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+tags:
+  - name: Identidad
+  - name: Archivos
+  - name: Transferencias
+  - name: Almacenamiento
