@@ -13,6 +13,8 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -81,6 +83,52 @@ public class AuthService {
         usuario.setContrasenaHash(passwordEncoder.encode(contrasenaNueva));
         usuarioRepository.save(usuario);
         sesionRepository.revocarTodas(usuario);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Sesion> listarSesionesActivas(String nombreUsuario) {
+        Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return sesionRepository.findByUsuarioAndRevocadaFalseAndExpiraEnAfter(usuario, LocalDateTime.now());
+    }
+
+    @Transactional
+    public void revocarSesion(String nombreUsuario, UUID sesionId) {
+        Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Sesion sesion = sesionRepository.findById(sesionId).orElseThrow(() -> new IllegalArgumentException("Sesión no encontrada"));
+        if (!sesion.getUsuario().getId().equals(usuario.getId())) {
+            throw new SecurityException("Recurso no accesible");
+        }
+        sesion.setRevocada(true);
+        sesionRepository.save(sesion);
+    }
+
+    @Transactional
+    public void logout(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        String tokenHash = hash(token);
+        sesionRepository.findByTokenHash(tokenHash).ifPresent(sesion -> {
+            sesion.setRevocada(true);
+            sesionRepository.save(sesion);
+        });
+    }
+
+    @Transactional
+    public void refresh(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token inválido");
+        }
+        String tokenHash = hash(token);
+        Sesion sesion = sesionRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new IllegalArgumentException("Sesión inválida"));
+        if (sesion.isRevocada() || sesion.getExpiraEn().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Sesión inválida o expirada");
+        }
+        sesion.setExpiraEn(LocalDateTime.now().plusDays(7));
+        sesionRepository.save(sesion);
     }
 
     private String generarToken() {
