@@ -1,5 +1,9 @@
 package org.servidor.personal.clienteservidor.identidad.aplicacion;
 
+import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
+import org.servidor.personal.clienteservidor.archivos.dominio.CuotaUsuario;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.CuotaUsuarioRepository;
 import org.servidor.personal.clienteservidor.identidad.dominio.Sesion;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.SesionRepository;
@@ -23,11 +27,16 @@ public class AuthService {
     private final SesionRepository sesionRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom random = new SecureRandom();
+    private final CarpetaRepository carpetaRepository;
+    private final CuotaUsuarioRepository cuotaUsuarioRepository;
 
-    public AuthService(UsuarioRepository usuarioRepository, SesionRepository sesionRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UsuarioRepository usuarioRepository, SesionRepository sesionRepository, PasswordEncoder passwordEncoder,
+                       CarpetaRepository carpetaRepository, CuotaUsuarioRepository cuotaUsuarioRepository) {
         this.usuarioRepository = usuarioRepository;
         this.sesionRepository = sesionRepository;
         this.passwordEncoder = passwordEncoder;
+        this.carpetaRepository = carpetaRepository;
+        this.cuotaUsuarioRepository = cuotaUsuarioRepository;
     }
 
     @Transactional
@@ -45,6 +54,22 @@ public class AuthService {
         usuario.setCuotaMaxBytes(1000000000L);
         usuario.setEstado("ACTIVO");
         usuarioRepository.save(usuario);
+
+        Carpeta raiz = new Carpeta();
+        raiz.setPropietario(usuario);
+        raiz.setPadre(null);
+        raiz.setNombre("Raíz");
+        raiz.setEsRaiz(true);
+        raiz.setEnPapelera(false);
+        raiz.setEstado("ACTIVO");
+        carpetaRepository.save(raiz);
+
+        CuotaUsuario cuota = new CuotaUsuario();
+        cuota.setUsuario(usuario);
+        cuota.setBytesOcupados(0L);
+        cuota.setBytesReservados(0L);
+        cuota.setEstado("ACTIVO");
+        cuotaUsuarioRepository.save(cuota);
     }
 
     @Transactional
