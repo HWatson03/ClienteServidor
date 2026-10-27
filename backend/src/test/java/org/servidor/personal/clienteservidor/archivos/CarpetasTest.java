@@ -10,7 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,8 +34,8 @@ class CarpetasTest {
                 .filter(c -> c.getPropietario().getNombreUsuario().equals("userC") && c.isEsRaiz())
                 .findFirst().orElseThrow();
         
-        Carpeta carpeta1 = carpetaService.crearCarpeta("userC", raiz.getId(), "Documentos");
-        Carpeta carpeta2 = carpetaService.crearCarpeta("userC", raiz.getId(), "Documentos");
+        Carpeta carpeta1 = carpetaService.crearCarpeta("userC", raiz.getIdCarpeta(), "Documentos");
+        Carpeta carpeta2 = carpetaService.crearCarpeta("userC", raiz.getIdCarpeta(), "Documentos");
         
         assertEquals("Documentos", carpeta1.getNombre());
         assertEquals("(1) Documentos", carpeta2.getNombre());

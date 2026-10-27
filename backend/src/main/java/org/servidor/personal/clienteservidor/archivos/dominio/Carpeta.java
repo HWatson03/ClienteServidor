@@ -4,26 +4,32 @@ import org.servidor.personal.clienteservidor.compartido.auditoria.Auditoria;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "carpetas", indexes = {
-        @Index(name = "idx_carpeta_propietario", columnList = "propietario_id"),
-        @Index(name = "idx_carpeta_padre", columnList = "padre_id")
+        @Index(name = "idx_carpeta_propietario", columnList = "id_usuario"),
+        @Index(name = "idx_carpeta_padre", columnList = "id_carpeta_padre")
 })
 public class Carpeta extends Auditoria {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_carpeta")
+    private Long idCarpeta;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "propietario_id", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario propietario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "padre_id")
+    @JoinColumn(name = "id_carpeta_padre")
     private Carpeta padre;
 
     @Column(name = "nombre", nullable = false, length = 255)
@@ -41,67 +47,11 @@ public class Carpeta extends Auditoria {
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
-    public UUID getId() {
-        return id;
-    }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
 
-    public Usuario getPropietario() {
-        return propietario;
-    }
 
-    public void setPropietario(Usuario propietario) {
-        this.propietario = propietario;
-    }
 
-    public Carpeta getPadre() {
-        return padre;
-    }
 
-    public void setPadre(Carpeta padre) {
-        this.padre = padre;
-    }
 
-    public String getNombre() {
-        return nombre;
-    }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public boolean isEsRaiz() {
-        return esRaiz;
-    }
-
-    public void setEsRaiz(boolean esRaiz) {
-        this.esRaiz = esRaiz;
-    }
-
-    public boolean isEnPapelera() {
-        return enPapelera;
-    }
-
-    public void setEnPapelera(boolean enPapelera) {
-        this.enPapelera = enPapelera;
-    }
-
-    public String getGrupoEliminacion() {
-        return grupoEliminacion;
-    }
-
-    public void setGrupoEliminacion(String grupoEliminacion) {
-        this.grupoEliminacion = grupoEliminacion;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
 }

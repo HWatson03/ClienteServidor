@@ -1,0 +1,87 @@
+package org.servidor.personal.clienteservidor.archivos.aplicacion;
+
+import lombok.RequiredArgsConstructor;
+import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
+import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
+import org.servidor.personal.clienteservidor.archivos.dominio.CuotaUsuario;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.ArchivoRepository;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.CuotaUsuarioRepository;
+import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
+import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class PapeleraService {
+
+    private final ArchivoRepository archivoRepository;
+    private final CarpetaRepository carpetaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final CuotaUsuarioRepository cuotaUsuarioRepository;
+
+    @Transactional
+    public void enviarArchivoAPapelera(String nombreUsuario, Long archivoId) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        Archivo archivo = archivoRepository.findById(archivoId).orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
+        if (!archivo.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+        String grupo = UUID.randomUUID().toString();
+        archivo.setEnPapelera(true);
+        archivo.setGrupoEliminacion(grupo);
+        archivo.setEliminadoEn(LocalDateTime.now());
+        archivoRepository.save(archivo);
+    }
+
+    @Transactional
+    public void restaurar(String nombreUsuario, String tipo, Long id) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        if ("archivo".equals(tipo)) {
+            Archivo archivo = archivoRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
+            if (!archivo.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            if (archivo.getCarpeta() != null && archivo.getCarpeta().isEnPapelera()) {
+                throw new IllegalArgumentException("Restaurar padre primero");
+            }
+            archivo.setEnPapelera(false);
+            archivo.setGrupoEliminacion(null);
+            archivo.setEliminadoEn(null);
+            archivoRepository.save(archivo);
+        } else if ("carpeta".equals(tipo)) {
+            Carpeta carpeta = carpetaRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
+            if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            if (carpeta.getPadre() != null && carpeta.getPadre().isEnPapelera()) {
+                throw new IllegalArgumentException("Restaurar padre primero");
+            }
+            carpeta.setEnPapelera(false);
+            carpeta.setGrupoEliminacion(null);
+            carpeta.setEliminadoEn(null);
+            carpetaRepository.save(carpeta);
+        }
+    }
+
+    @Transactional
+    public void eliminarDefinitivamente(String nombreUsuario, String tipo, Long id) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        if ("archivo".equals(tipo)) {
+            Archivo archivo = archivoRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
+            if (!archivo.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
+            cuota.setBytesOcupados(Math.max(0, cuota.getBytesOcupados() - archivo.getTamano()));
+            cuotaUsuarioRepository.save(cuota);
+            archivoRepository.delete(archivo);
+        } else if ("carpeta".equals(tipo)) {
+            Carpeta carpeta = carpetaRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
+            if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            carpetaRepository.delete(carpeta);
+        }
+    }
+
+    private Usuario obtenerUsuario(String nombreUsuario) {
+        return usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+    }
+}

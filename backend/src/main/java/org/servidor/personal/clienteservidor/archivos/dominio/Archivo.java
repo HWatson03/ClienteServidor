@@ -4,26 +4,32 @@ import org.servidor.personal.clienteservidor.compartido.auditoria.Auditoria;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "archivos", indexes = {
-        @Index(name = "idx_archivo_propietario", columnList = "propietario_id"),
-        @Index(name = "idx_archivo_carpeta", columnList = "carpeta_id")
+        @Index(name = "idx_archivo_propietario", columnList = "id_usuario"),
+        @Index(name = "idx_archivo_carpeta", columnList = "id_carpeta")
 })
 public class Archivo extends Auditoria {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_archivo")
+    private Long idArchivo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "propietario_id", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario propietario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "carpeta_id", nullable = false)
+    @JoinColumn(name = "id_carpeta", nullable = false)
     private Carpeta carpeta;
 
     @Column(name = "nombre_visible", nullable = false, length = 255)
@@ -47,83 +53,13 @@ public class Archivo extends Auditoria {
     @Column(name = "eliminado_en")
     private LocalDateTime eliminadoEn;
 
-    public UUID getId() {
-        return id;
-    }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
 
-    public Usuario getPropietario() {
-        return propietario;
-    }
 
-    public void setPropietario(Usuario propietario) {
-        this.propietario = propietario;
-    }
 
-    public Carpeta getCarpeta() {
-        return carpeta;
-    }
 
-    public void setCarpeta(Carpeta carpeta) {
-        this.carpeta = carpeta;
-    }
 
-    public String getNombreVisible() {
-        return nombreVisible;
-    }
 
-    public void setNombreVisible(String nombreVisible) {
-        this.nombreVisible = nombreVisible;
-    }
 
-    public String getClaveDisco() {
-        return claveDisco;
-    }
 
-    public void setClaveDisco(String claveDisco) {
-        this.claveDisco = claveDisco;
-    }
-
-    public Long getTamano() {
-        return tamano;
-    }
-
-    public void setTamano(Long tamano) {
-        this.tamano = tamano;
-    }
-
-    public String getTipoMime() {
-        return tipoMime;
-    }
-
-    public void setTipoMime(String tipoMime) {
-        this.tipoMime = tipoMime;
-    }
-
-    public boolean isEnPapelera() {
-        return enPapelera;
-    }
-
-    public void setEnPapelera(boolean enPapelera) {
-        this.enPapelera = enPapelera;
-    }
-
-    public String getGrupoEliminacion() {
-        return grupoEliminacion;
-    }
-
-    public void setGrupoEliminacion(String grupoEliminacion) {
-        this.grupoEliminacion = grupoEliminacion;
-    }
-
-    public LocalDateTime getEliminadoEn() {
-        return eliminadoEn;
-    }
-
-    public void setEliminadoEn(LocalDateTime eliminadoEn) {
-        this.eliminadoEn = eliminadoEn;
-    }
 }

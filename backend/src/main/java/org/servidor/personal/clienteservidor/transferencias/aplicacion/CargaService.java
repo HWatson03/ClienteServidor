@@ -11,6 +11,7 @@ import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
 import org.servidor.personal.clienteservidor.transferencias.dominio.Carga;
 import org.servidor.personal.clienteservidor.transferencias.infraestructura.CargaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CargaService {
 
     private final CargaRepository cargaRepository;
@@ -30,24 +32,15 @@ public class CargaService {
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
     private final AlmacenamientoService almacenamientoService;
 
-    public CargaService(CargaRepository cargaRepository, UsuarioRepository usuarioRepository, CarpetaRepository carpetaRepository,
-                        ArchivoRepository archivoRepository, CuotaUsuarioRepository cuotaUsuarioRepository,
-                        AlmacenamientoService almacenamientoService) {
-        this.cargaRepository = cargaRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.carpetaRepository = carpetaRepository;
-        this.archivoRepository = archivoRepository;
-        this.cuotaUsuarioRepository = cuotaUsuarioRepository;
-        this.almacenamientoService = almacenamientoService;
-    }
+
 
     @Transactional
-    public Carga iniciar(String nombreUsuario, UUID carpetaDestinoId, String nombreArchivo, long tamanoEsperado) {
+    public Carga iniciar(String nombreUsuario, Long carpetaDestinoId, String nombreArchivo, long tamanoEsperado) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carpeta destino = obtenerCarpetaPropia(usuario, carpetaDestinoId);
         if (tamanoEsperado < 0) throw new IllegalArgumentException("Tamaño inválido");
         
-        synchronized (("cuota:" + usuario.getId()).intern()) {
+        synchronized (("cuota:" + usuario.getIdUsuario()).intern()) {
             CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario)
                     .orElseThrow(() -> new IllegalStateException("Cuota no encontrada"));
             if (cuota.getBytesOcupados() + cuota.getBytesReservados() + tamanoEsperado > usuario.getCuotaMaxBytes()) {
@@ -71,18 +64,18 @@ public class CargaService {
     }
 
     @Transactional(readOnly = true)
-    public Carga consultar(String nombreUsuario, UUID cargaId) {
+    public Carga consultar(String nombreUsuario, Long cargaId) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
-        if (!carga.getUsuario().getId().equals(usuario.getId())) throw new SecurityException("Recurso no accesible");
+        if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         return carga;
     }
 
     @Transactional
-    public void subirFragmento(String nombreUsuario, UUID cargaId, long offset, InputStream input) {
+    public void subirFragmento(String nombreUsuario, Long cargaId, long offset, InputStream input) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
-        if (!carga.getUsuario().getId().equals(usuario.getId())) throw new SecurityException("Recurso no accesible");
+        if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) return;
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
         try {
@@ -96,10 +89,10 @@ public class CargaService {
     }
 
     @Transactional
-    public Archivo finalizar(String nombreUsuario, UUID cargaId) {
+    public Archivo finalizar(String nombreUsuario, Long cargaId) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
-        if (!carga.getUsuario().getId().equals(usuario.getId())) throw new SecurityException("Recurso no accesible");
+        if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) {
             return archivoRepository.findAll().stream().findFirst().orElseThrow();
         }
@@ -132,9 +125,9 @@ public class CargaService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
     }
 
-    private Carpeta obtenerCarpetaPropia(Usuario usuario, UUID carpetaId) {
+    private Carpeta obtenerCarpetaPropia(Usuario usuario, Long carpetaId) {
         Carpeta carpeta = carpetaRepository.findById(carpetaId).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
-        if (!carpeta.getPropietario().getId().equals(usuario.getId())) throw new SecurityException("Recurso no accesible");
+        if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         return carpeta;
     }
 }

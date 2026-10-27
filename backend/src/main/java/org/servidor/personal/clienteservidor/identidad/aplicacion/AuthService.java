@@ -8,6 +8,7 @@ import org.servidor.personal.clienteservidor.identidad.dominio.Sesion;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.SesionRepository;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +19,9 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
@@ -30,14 +31,7 @@ public class AuthService {
     private final CarpetaRepository carpetaRepository;
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
 
-    public AuthService(UsuarioRepository usuarioRepository, SesionRepository sesionRepository, PasswordEncoder passwordEncoder,
-                       CarpetaRepository carpetaRepository, CuotaUsuarioRepository cuotaUsuarioRepository) {
-        this.usuarioRepository = usuarioRepository;
-        this.sesionRepository = sesionRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.carpetaRepository = carpetaRepository;
-        this.cuotaUsuarioRepository = cuotaUsuarioRepository;
-    }
+
 
     @Transactional
     public void registrar(String nombreUsuario, String contrasena) {
@@ -80,7 +74,7 @@ public class AuthService {
             throw new IllegalArgumentException("Credenciales inválidas");
         }
         LocalDateTime ahora = LocalDateTime.now();
-        synchronized (("login:" + usuario.getId()).intern()) {
+        synchronized (("login:" + usuario.getIdUsuario()).intern()) {
             long activas = sesionRepository.countActivas(usuario, ahora);
             if (activas >= 3) {
                 throw new IllegalArgumentException("Máximo de 3 sesiones activas alcanzado");
@@ -118,11 +112,11 @@ public class AuthService {
     }
 
     @Transactional
-    public void revocarSesion(String nombreUsuario, UUID sesionId) {
+    public void revocarSesion(String nombreUsuario, Long sesionId) {
         Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         Sesion sesion = sesionRepository.findById(sesionId).orElseThrow(() -> new IllegalArgumentException("Sesión no encontrada"));
-        if (!sesion.getUsuario().getId().equals(usuario.getId())) {
+        if (!sesion.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
             throw new SecurityException("Recurso no accesible");
         }
         sesion.setRevocada(true);

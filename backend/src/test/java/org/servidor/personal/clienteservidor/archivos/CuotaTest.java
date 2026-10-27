@@ -2,6 +2,7 @@ package org.servidor.personal.clienteservidor.archivos;
 
 import org.junit.jupiter.api.Test;
 import org.servidor.personal.clienteservidor.archivos.aplicacion.CuotaService;
+import org.servidor.personal.clienteservidor.archivos.aplicacion.dto.ResumenCuota;
 import org.servidor.personal.clienteservidor.identidad.aplicacion.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,7 +26,7 @@ class CuotaTest {
     void reservaCuota() {
         authService.registrar("userD", "clave123");
         cuotaService.reservar("userD", 500000000L);
-        CuotaService.ResumenCuota resumen = cuotaService.resumen("userD");
+        ResumenCuota resumen = cuotaService.resumen("userD");
         assertEquals(500000000L, resumen.reservados());
         assertThrows(IllegalArgumentException.class, () -> cuotaService.reservar("userD", 600000000L));
     }

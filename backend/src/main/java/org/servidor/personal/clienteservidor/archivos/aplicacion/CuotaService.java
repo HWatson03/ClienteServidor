@@ -1,22 +1,23 @@
 package org.servidor.personal.clienteservidor.archivos.aplicacion;
 
+import org.servidor.personal.clienteservidor.archivos.aplicacion.dto.ResumenCuota;
+
 import org.servidor.personal.clienteservidor.archivos.dominio.CuotaUsuario;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CuotaUsuarioRepository;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class CuotaService {
 
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public CuotaService(CuotaUsuarioRepository cuotaUsuarioRepository, UsuarioRepository usuarioRepository) {
-        this.cuotaUsuarioRepository = cuotaUsuarioRepository;
-        this.usuarioRepository = usuarioRepository;
-    }
+
 
     @Transactional
     public void reservar(String nombreUsuario, long bytes) {
@@ -52,5 +53,4 @@ public class CuotaService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
     }
 
-    public record ResumenCuota(long limite, long ocupados, long reservados, long disponibles) {}
 }

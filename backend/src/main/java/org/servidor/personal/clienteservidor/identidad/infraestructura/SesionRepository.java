@@ -10,9 +10,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-public interface SesionRepository extends JpaRepository<Sesion, UUID> {
+public interface SesionRepository extends JpaRepository<Sesion, Long> {
     Optional<Sesion> findByTokenHash(String tokenHash);
 
     @Query("SELECT COUNT(s) FROM Sesion s WHERE s.usuario = :usuario AND s.revocada = false AND s.expiraEn > :ahora")

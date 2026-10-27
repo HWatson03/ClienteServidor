@@ -4,18 +4,24 @@ import org.servidor.personal.clienteservidor.compartido.auditoria.Auditoria;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 
 import jakarta.persistence.*;
-import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "cuota_usuario")
 public class CuotaUsuario extends Auditoria {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_cuota_usuario")
+    private Long idCuotaUsuario;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
+    @JoinColumn(name = "id_usuario", nullable = false, unique = true)
     private Usuario usuario;
 
     @Column(name = "bytes_ocupados", nullable = false)
@@ -24,35 +30,7 @@ public class CuotaUsuario extends Auditoria {
     @Column(name = "bytes_reservados", nullable = false)
     private Long bytesReservados = 0L;
 
-    public UUID getId() {
-        return id;
-    }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
 
-    public Usuario getUsuario() {
-        return usuario;
-    }
 
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
-
-    public Long getBytesOcupados() {
-        return bytesOcupados;
-    }
-
-    public void setBytesOcupados(Long bytesOcupados) {
-        this.bytesOcupados = bytesOcupados;
-    }
-
-    public Long getBytesReservados() {
-        return bytesReservados;
-    }
-
-    public void setBytesReservados(Long bytesReservados) {
-        this.bytesReservados = bytesReservados;
-    }
 }

@@ -1,6 +1,6 @@
 package org.servidor.personal.clienteservidor.archivos.infraestructura;
 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -12,23 +12,28 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 @Service
+@RequiredArgsConstructor
 public class AlmacenamientoService {
 
-    private final Path root;
-    private final Path temp;
+    private final AlmacenamientoProperties properties;
 
-    public AlmacenamientoService(@Value("${app.storage.root}") String rootDir, @Value("${app.storage.temp}") String tempDir) {
-        this.root = Paths.get(rootDir);
-        this.temp = Paths.get(tempDir);
+    private Path root() { return Paths.get(properties.getRoot()); }
+    private Path temp() { return Paths.get(properties.getTemp()); }
+
+    @jakarta.annotation.PostConstruct
+    void crearDirectorios() {
+        Path root = root();
+        Path temp = temp();
         try {
-            Files.createDirectories(this.root);
-            Files.createDirectories(this.temp);
+            Files.createDirectories(root);
+            Files.createDirectories(temp);
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo crear directorios de almacenamiento", e);
         }
     }
 
     public Path guardarTemporal(String clave, InputStream input, long offset, long length) throws IOException {
+        Path temp = temp();
         Path archivo = temp.resolve(clave);
         Files.createDirectories(archivo.getParent());
         try (OutputStream out = Files.newOutputStream(archivo, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
@@ -41,12 +46,12 @@ public class AlmacenamientoService {
     }
 
     public Path obtenerTemporal(String clave) {
-        return temp.resolve(clave);
+        return temp().resolve(clave);
     }
 
     public void moverAFinal(String claveTemporal, String claveFinal) throws IOException {
-        Path origen = temp.resolve(claveTemporal);
-        Path destino = root.resolve(claveFinal);
+        Path origen = temp().resolve(claveTemporal);
+        Path destino = root().resolve(claveFinal);
         Files.createDirectories(destino.getParent());
         Files.move(origen, destino);
     }

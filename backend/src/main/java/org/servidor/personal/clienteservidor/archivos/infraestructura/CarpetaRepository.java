@@ -6,11 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-public interface CarpetaRepository extends JpaRepository<Carpeta, UUID> {
+public interface CarpetaRepository extends JpaRepository<Carpeta, Long> {
     Optional<Carpeta> findByPropietarioAndEsRaizTrue(Usuario propietario);
     List<Carpeta> findByPropietarioAndPadreAndEnPapeleraFalse(Usuario propietario, Carpeta padre);
-    Optional<Carpeta> findByIdAndPropietario(UUID id, Usuario propietario);
+    Optional<Carpeta> findByIdCarpetaAndPropietario(Long id, Usuario propietario);
     boolean existsByPropietarioAndPadreAndNombreIgnoreCaseAndEnPapeleraFalse(Usuario propietario, Carpeta padre, String nombre);
 }

@@ -6,28 +6,25 @@ import org.servidor.personal.clienteservidor.archivos.infraestructura.ArchivoRep
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ArchivoService {
 
     private final ArchivoRepository archivoRepository;
     private final CarpetaRepository carpetaRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public ArchivoService(ArchivoRepository archivoRepository, CarpetaRepository carpetaRepository, UsuarioRepository usuarioRepository) {
-        this.archivoRepository = archivoRepository;
-        this.carpetaRepository = carpetaRepository;
-        this.usuarioRepository = usuarioRepository;
-    }
+
 
     @Transactional(readOnly = true)
-    public Page<Archivo> listar(String nombreUsuario, UUID carpetaId, String nombre, int pagina, int tamano) {
+    public Page<Archivo> listar(String nombreUsuario, Long carpetaId, String nombre, int pagina, int tamano) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         if (nombre != null && !nombre.isBlank()) {
             return archivoRepository.buscarPorNombre(usuario, nombre.trim(), PageRequest.of(pagina, Math.min(tamano, 200)));
@@ -37,7 +34,7 @@ public class ArchivoService {
     }
 
     @Transactional
-    public void renombrar(String nombreUsuario, UUID archivoId, String nuevoNombre) {
+    public void renombrar(String nombreUsuario, Long archivoId, String nuevoNombre) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Archivo archivo = obtenerArchivoPropio(usuario, archivoId);
         String nombreFinal = resolverNombreUnico(usuario, archivo.getCarpeta(), nuevoNombre);
@@ -70,17 +67,17 @@ public class ArchivoService {
                 .orElseThrow(() -> new IllegalStateException("Raíz no encontrada"));
     }
 
-    private Carpeta obtenerCarpetaPropia(Usuario usuario, UUID carpetaId) {
+    private Carpeta obtenerCarpetaPropia(Usuario usuario, Long carpetaId) {
         Carpeta carpeta = carpetaRepository.findById(carpetaId).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
-        if (!carpeta.getPropietario().getId().equals(usuario.getId())) {
+        if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) {
             throw new SecurityException("Recurso no accesible");
         }
         return carpeta;
     }
 
-    private Archivo obtenerArchivoPropio(Usuario usuario, UUID archivoId) {
+    private Archivo obtenerArchivoPropio(Usuario usuario, Long archivoId) {
         Archivo archivo = archivoRepository.findById(archivoId).orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
-        if (!archivo.getPropietario().getId().equals(usuario.getId())) {
+        if (!archivo.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) {
             throw new SecurityException("Recurso no accesible");
         }
         return archivo;

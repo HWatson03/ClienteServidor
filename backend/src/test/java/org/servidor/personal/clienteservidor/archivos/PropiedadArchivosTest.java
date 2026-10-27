@@ -36,6 +36,6 @@ class PropiedadArchivosTest {
                         c.getPropietario().getNombreUsuario().equalsIgnoreCase("userB") && c.isEsRaiz())
                 .findFirst().orElseThrow();
         
-        assertThrows(SecurityException.class, () -> carpetaService.crearCarpeta("userA", raizB.getId(), "test"));
+        assertThrows(SecurityException.class, () -> carpetaService.crearCarpeta("userA", raizB.getIdCarpeta(), "test"));
     }
 }

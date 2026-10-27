@@ -4,22 +4,20 @@ import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CarpetaService {
 
     private final CarpetaRepository carpetaRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public CarpetaService(CarpetaRepository carpetaRepository, UsuarioRepository usuarioRepository) {
-        this.carpetaRepository = carpetaRepository;
-        this.usuarioRepository = usuarioRepository;
-    }
+
 
     @Transactional(readOnly = true)
     public Carpeta obtenerRaiz(String nombreUsuario) {
@@ -29,14 +27,14 @@ public class CarpetaService {
     }
 
     @Transactional(readOnly = true)
-    public List<Carpeta> listarCarpetas(String nombreUsuario, UUID carpetaId) {
+    public List<Carpeta> listarCarpetas(String nombreUsuario, Long carpetaId) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carpeta padre = carpetaId == null ? obtenerRaiz(nombreUsuario) : obtenerCarpetaPropia(usuario, carpetaId);
         return carpetaRepository.findByPropietarioAndPadreAndEnPapeleraFalse(usuario, padre);
     }
 
     @Transactional
-    public Carpeta crearCarpeta(String nombreUsuario, UUID carpetaPadreId, String nombre) {
+    public Carpeta crearCarpeta(String nombreUsuario, Long carpetaPadreId, String nombre) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carpeta padre = carpetaPadreId == null ? obtenerRaiz(nombreUsuario) : obtenerCarpetaPropia(usuario, carpetaPadreId);
         String nombreFinal = resolverNombreUnico(usuario, padre, nombre);
@@ -70,9 +68,9 @@ public class CarpetaService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
     }
 
-    private Carpeta obtenerCarpetaPropia(Usuario usuario, UUID carpetaId) {
+    private Carpeta obtenerCarpetaPropia(Usuario usuario, Long carpetaId) {
         Carpeta carpeta = carpetaRepository.findById(carpetaId).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
-        if (!carpeta.getPropietario().getId().equals(usuario.getId())) {
+        if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) {
             throw new SecurityException("Recurso no accesible");
         }
         return carpeta;

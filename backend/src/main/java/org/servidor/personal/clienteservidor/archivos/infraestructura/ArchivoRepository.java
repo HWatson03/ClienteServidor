@@ -10,14 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
-import java.util.UUID;
 
-public interface ArchivoRepository extends JpaRepository<Archivo, UUID> {
+public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
     Page<Archivo> findByPropietarioAndCarpetaAndEnPapeleraFalse(Usuario propietario, Carpeta carpeta, Pageable pageable);
     
     @Query("SELECT a FROM Archivo a WHERE a.propietario = :propietario AND a.enPapelera = false AND LOWER(a.nombreVisible) LIKE LOWER(CONCAT('%', :nombre, '%'))")
     Page<Archivo> buscarPorNombre(@Param("propietario") Usuario propietario, @Param("nombre") String nombre, Pageable pageable);
     
-    Optional<Archivo> findByIdAndPropietario(UUID id, Usuario propietario);
+    Optional<Archivo> findByIdArchivoAndPropietario(Long id, Usuario propietario);
     boolean existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(Usuario propietario, Carpeta carpeta, String nombreVisible);
 }
