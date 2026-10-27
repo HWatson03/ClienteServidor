@@ -36,6 +36,326 @@ paths:
           description: Sesión iniciada
         '401':
           description: Credenciales inválidas
+  /api/auth/refresh:
+    post:
+      tags: [Identidad]
+      summary: Renovar sesión
+      responses:
+        '204':
+          description: Renovado
+  /api/auth/logout:
+    post:
+      tags: [Identidad]
+      summary: Cerrar sesión
+      responses:
+        '204':
+          description: Cerrado
+  /api/auth/sesiones:
+    get:
+      tags: [Identidad]
+      summary: Listar sesiones activas
+      parameters:
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de sesiones
+  /api/auth/sesiones/{id}:
+    delete:
+      tags: [Identidad]
+      summary: Revocar sesión
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Revocada
+  /api/auth/contrasena:
+    patch:
+      tags: [Identidad]
+      summary: Cambiar contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioContrasenaRequest'
+      responses:
+        '204':
+          description: Contraseña cambiada
+        '400':
+          description: Solicitud inválida
+  /api/archivos:
+    get:
+      tags: [Archivos]
+      summary: Listar o buscar archivos
+      parameters:
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: carpetaId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: nombre
+          schema:
+            type: string
+        - in: query
+          name: pagina
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: tamano
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Lista de archivos
+  /api/archivos/{id}:
+    patch:
+      tags: [Archivos]
+      summary: Renombrar archivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenombrarRequest'
+      responses:
+        '204':
+          description: Renombrado
+  /api/carpetas:
+    get:
+      tags: [Archivos]
+      summary: Listar carpetas
+      parameters:
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: carpetaId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de carpetas
+    post:
+      tags: [Archivos]
+      summary: Crear carpeta
+      parameters:
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearCarpetaRequest'
+      responses:
+        '200':
+          description: Carpeta creada
+  /api/cargas:
+    post:
+      tags: [Transferencias]
+      summary: Iniciar carga
+      responses:
+        '200':
+          description: Carga iniciada
+  /api/cargas/{id}:
+    get:
+      tags: [Transferencias]
+      summary: Consultar carga
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estado de carga
+    patch:
+      tags: [Transferencias]
+      summary: Subir fragmento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Fragmento recibido
+    delete:
+      tags: [Transferencias]
+      summary: Cancelar carga
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Cancelada
+  /api/cargas/{id}/finalizar:
+    post:
+      tags: [Transferencias]
+      summary: Finalizar carga
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Archivo creado
+  /api/copias:
+    post:
+      tags: [Archivos]
+      summary: Crear copia
+      responses:
+        '200':
+          description: Tarea de copia creada
+  /api/copias/{id}:
+    get:
+      tags: [Archivos]
+      summary: Consultar progreso de copia
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Progreso
+  /api/papelera:
+    get:
+      tags: [Archivos]
+      summary: Listar papelera
+      responses:
+        '200':
+          description: Elementos en papelera
+    delete:
+      tags: [Archivos]
+      summary: Vaciar papelera
+      responses:
+        '204':
+          description: Papelera vaciada
+  /api/papelera/{tipo}/{id}/restaurar:
+    post:
+      tags: [Archivos]
+      summary: Restaurar elemento
+      parameters:
+        - in: path
+          name: tipo
+          required: true
+          schema:
+            type: string
+            enum: [archivo, carpeta]
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Restaurado
+  /api/papelera/{tipo}/{id}:
+    delete:
+      tags: [Archivos]
+      summary: Eliminar definitivamente
+      parameters:
+        - in: path
+          name: tipo
+          required: true
+          schema:
+            type: string
+            enum: [archivo, carpeta]
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Eliminado definitivamente
+  /api/archivos/{id}:
+    delete:
+      tags: [Archivos]
+      summary: Enviar a papelera
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Enviado a papelera
+  /api/almacenamiento/resumen:
+    get:
+      tags: [Almacenamiento]
+      summary: Resumen de cuota
+      parameters:
+        - in: query
+          name: nombreUsuario
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resumen de cuota
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenCuota'
 components:
   schemas:
     RegistroRequest:
@@ -54,6 +374,46 @@ components:
           type: string
         contrasena:
           type: string
+    CambioContrasenaRequest:
+      type: object
+      required: [nombreUsuario, contrasenaActual, contrasenaNueva]
+      properties:
+        nombreUsuario:
+          type: string
+        contrasenaActual:
+          type: string
+        contrasenaNueva:
+          type: string
+    RenombrarRequest:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+    CrearCarpetaRequest:
+      type: object
+      required: [nombre]
+      properties:
+        carpetaPadreId:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+    ResumenCuota:
+      type: object
+      properties:
+        limite:
+          type: integer
+          format: int64
+        ocupados:
+          type: integer
+          format: int64
+        reservados:
+          type: integer
+          format: int64
+        disponibles:
+          type: integer
+          format: int64
     ApiError:
       type: object
       properties:
