@@ -78,10 +78,9 @@ public class CargaService {
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
         if (offset > carga.getTamanoEsperado()) throw new IllegalArgumentException("Offset inválido");
         try {
-            java.nio.file.Path temp = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
             almacenamientoService.guardarTemporal(carga.getClaveTemporal(), input, offset, carga.getTamanoEsperado());
-            // Recalcular offset basado en tamaño actual del archivo
-            long tamanoActual = Files.exists(temp) ? Files.size(temp) : 0;
+            long tamanoActual = Files.exists(almacenamientoService.obtenerTemporal(carga.getClaveTemporal())) 
+                    ? Files.size(almacenamientoService.obtenerTemporal(carga.getClaveTemporal())) : 0;
             carga.setOffsetConfirmado(tamanoActual);
             cargaRepository.save(carga);
         } catch (IllegalArgumentException e) {

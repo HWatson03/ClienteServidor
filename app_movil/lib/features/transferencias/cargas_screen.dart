@@ -50,24 +50,24 @@ class _CargasScreenState extends State<CargasScreen> {
       }
       final cargaId = match.group(1)!;
       
-      // Leer archivo
-      List<int> bytes;
-      if (file.bytes != null) {
-        bytes = file.bytes!;
-      } else if (file.path != null) {
-        bytes = await File(file.path!).readAsBytes();
-      } else {
+      // Leer archivo en stream para evitar memoria
+      final filePath = file.path;
+      if (filePath == null) {
         setState(() { _estado = 'No se pudo leer archivo'; _subiendo = false; });
         return;
       }
       
-      _totalFragmentos = (bytes.length / _tamanoFragmento).ceil();
+      final fileObj = File(filePath);
+      final fileSize = await fileObj.length();
+      _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
       if (_totalFragmentos == 0) _totalFragmentos = 1;
       
+      final raf = await fileObj.open();
       int offset = 0;
-      while (offset < bytes.length) {
-        final fin = (offset + _tamanoFragmento).clamp(0, bytes.length);
-        final fragmento = bytes.sublist(offset, fin);
+      while (offset < fileSize) {
+        final fin = (offset + _tamanoFragmento).clamp(0, fileSize);
+        final length = fin - offset;
+        final fragmento = await raf.read(length);
         
         _fragmentoActual++;
         setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
@@ -81,11 +81,13 @@ class _CargasScreenState extends State<CargasScreen> {
         
         if (streamed.statusCode != 200) {
           setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+          await raf.close();
           return;
         }
         
         offset = fin;
       }
+      await raf.close();
       
       setState(() { _estado = 'Finalizando...'; });
       final fin = await http.post(

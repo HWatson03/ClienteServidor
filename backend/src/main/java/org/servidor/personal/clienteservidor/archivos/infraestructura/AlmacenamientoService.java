@@ -32,12 +32,26 @@ public class AlmacenamientoService {
         }
     }
 
-    public Path guardarTemporal(String clave, InputStream input, long offset, long length) throws IOException {
+    public Path guardarTemporal(String clave, InputStream input, long offset, long tamanoEsperado) throws IOException {
         Path temp = temp();
         Path archivo = temp.resolve(clave);
         Files.createDirectories(archivo.getParent());
+        // Validate that offset matches current file size
+        long tamanoActual = Files.exists(archivo) ? Files.size(archivo) : 0;
+        if (tamanoActual != offset) {
+            throw new IllegalArgumentException("Offset incompatible");
+        }
+        // Read input with limit
+        byte[] data = input.readAllBytes();
+        if (data.length == 0) {
+            return archivo;
+        }
+        long nuevo = offset + data.length;
+        if (nuevo > tamanoEsperado) {
+            throw new IllegalArgumentException("Excede tamaño esperado");
+        }
         try (OutputStream out = Files.newOutputStream(archivo, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
-            input.transferTo(out);
+            out.write(data);
         }
         return archivo;
     }
