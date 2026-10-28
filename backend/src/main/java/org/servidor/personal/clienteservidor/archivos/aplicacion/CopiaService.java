@@ -64,6 +64,12 @@ public class CopiaService {
             Files.createDirectories(destinoPath.getParent());
             Files.copy(origenPath, destinoPath);
         } catch (Exception ex) {
+            // Liberar cuota reservada
+            synchronized (("cuota:" + usuario.getIdUsuario()).intern()) {
+                CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
+                cuota.setBytesReservados(Math.max(0, cuota.getBytesReservados() - origen.getTamano()));
+                cuotaUsuarioRepository.save(cuota);
+            }
             tarea.setEstado("FALLIDO");
             tarea.setError(ex.getMessage());
             tareaCopiaRepository.save(tarea);

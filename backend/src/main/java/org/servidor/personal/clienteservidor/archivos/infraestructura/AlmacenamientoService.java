@@ -36,10 +36,7 @@ public class AlmacenamientoService {
         Path temp = temp();
         Path archivo = temp.resolve(clave);
         Files.createDirectories(archivo.getParent());
-        try (OutputStream out = Files.newOutputStream(archivo, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
-            if (offset > 0) {
-                out.write(Files.readAllBytes(archivo).toString().getBytes(), 0, 0);
-            }
+        try (OutputStream out = Files.newOutputStream(archivo, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
             input.transferTo(out);
         }
         return archivo;

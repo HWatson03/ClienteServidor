@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
@@ -18,5 +19,6 @@ public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
     Page<Archivo> buscarPorNombre(@Param("propietario") Usuario propietario, @Param("nombre") String nombre, Pageable pageable);
     
     Optional<Archivo> findByIdArchivoAndPropietario(Long id, Usuario propietario);
+    List<Archivo> findByPropietarioAndEnPapeleraTrue(Usuario propietario);
     boolean existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(Usuario propietario, Carpeta carpeta, String nombreVisible);
 }

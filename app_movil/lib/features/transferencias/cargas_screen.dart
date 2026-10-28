@@ -16,14 +16,22 @@ class _CargasScreenState extends State<CargasScreen> {
   final _apiClient = ApiClient();
   bool _subiendo = false;
   String _estado = '';
+  int _fragmentoActual = 0;
+  int _totalFragmentos = 0;
+  static const int _tamanoFragmento = 512 * 1024; // 512KB
 
   Future<void> _seleccionarYSubir() async {
     final result = await FilePicker.platform.pickFiles(withReadStream: true);
     if (result == null) return;
     final file = result.files.single;
+    
     setState(() { _subiendo = true; _estado = 'Iniciando...'; });
     
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = await _apiClient.getToken();
+      
+      // Iniciar carga
       final resp = await _apiClient.post('/api/cargas', {
         'carpetaDestinoId': 1,
         'nombreArchivo': file.name,
@@ -31,24 +39,18 @@ class _CargasScreenState extends State<CargasScreen> {
       });
       
       if (resp.statusCode != 201 && resp.statusCode != 200) {
-        setState(() { _estado = 'Error al iniciar'; _subiendo = false; });
+        setState(() { _estado = 'Error al iniciar: ${resp.statusCode}'; _subiendo = false; });
         return;
       }
       
-      final data = _apiClient.getToken().then((t) => null);
-      // Parse cargaId
-      final json = resp.body;
-      final match = RegExp(r'"idCarga":(\d+)').firstMatch(json);
+      final match = RegExp(r'"idCarga":(\d+)').firstMatch(resp.body);
       if (match == null) {
         setState(() { _estado = 'Error al obtener carga'; _subiendo = false; });
         return;
       }
-      final cargaId = match.group(1);
-      final token = await _apiClient.getToken();
+      final cargaId = match.group(1)!;
       
-      setState(() { _estado = 'Subiendo fragmentos...'; });
-      
-      // Leer archivo completo
+      // Leer archivo
       List<int> bytes;
       if (file.bytes != null) {
         bytes = file.bytes!;
@@ -59,12 +61,31 @@ class _CargasScreenState extends State<CargasScreen> {
         return;
       }
       
-      final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=0');
-      final request = http.MultipartRequest('PUT', uri);
-      if (token != null) request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: file.name));
-      final streamed = await request.send();
-      await streamed.stream.bytesToString();
+      _totalFragmentos = (bytes.length / _tamanoFragmento).ceil();
+      if (_totalFragmentos == 0) _totalFragmentos = 1;
+      
+      int offset = 0;
+      while (offset < bytes.length) {
+        final fin = (offset + _tamanoFragmento).clamp(0, bytes.length);
+        final fragmento = bytes.sublist(offset, fin);
+        
+        _fragmentoActual++;
+        setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
+        
+        final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
+        final request = http.MultipartRequest('PUT', uri);
+        if (token != null) request.headers['Authorization'] = 'Bearer $token';
+        request.files.add(http.MultipartFile.fromBytes('file', fragmento, filename: file.name));
+        final streamed = await request.send();
+        await streamed.stream.bytesToString();
+        
+        if (streamed.statusCode != 200) {
+          setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+          return;
+        }
+        
+        offset = fin;
+      }
       
       setState(() { _estado = 'Finalizando...'; });
       final fin = await http.post(
@@ -99,6 +120,9 @@ class _CargasScreenState extends State<CargasScreen> {
               child: Text(_subiendo ? 'Subiendo...' : 'Seleccionar archivo para subir'),
             ),
             SizedBox(height: 16),
+            if (_subiendo && _totalFragmentos > 0)
+              LinearProgressIndicator(value: _fragmentoActual / _totalFragmentos),
+            SizedBox(height: 8),
             Text(_estado),
           ],
         ),

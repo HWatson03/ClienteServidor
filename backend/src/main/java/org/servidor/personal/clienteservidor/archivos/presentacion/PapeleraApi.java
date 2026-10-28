@@ -30,24 +30,20 @@ public class PapeleraApi {
         Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(autenticacionUtil.nombreUsuarioAutenticado().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         List<Map<String, Object>> resultado = new ArrayList<>();
-        for (Archivo a : archivoRepository.findAll()) {
-            if (a.getPropietario() != null && usuario.getIdUsuario().equals(a.getPropietario().getIdUsuario()) && a.isEnPapelera()) {
-                resultado.add(Map.of(
-                        "tipo", "ARCHIVO",
-                        "idArchivo", a.getIdArchivo(),
-                        "nombreVisible", a.getNombreVisible() != null ? a.getNombreVisible() : "",
-                        "tamano", a.getTamano() != null ? a.getTamano() : 0
-                ));
-            }
+        for (Archivo a : archivoRepository.findByPropietarioAndEnPapeleraTrue(usuario)) {
+            resultado.add(Map.of(
+                    "tipo", "ARCHIVO",
+                    "idArchivo", a.getIdArchivo(),
+                    "nombreVisible", a.getNombreVisible() != null ? a.getNombreVisible() : "",
+                    "tamano", a.getTamano() != null ? a.getTamano() : 0
+            ));
         }
-        for (Carpeta c : carpetaRepository.findAll()) {
-            if (c.getPropietario() != null && usuario.getIdUsuario().equals(c.getPropietario().getIdUsuario()) && c.isEnPapelera()) {
-                resultado.add(Map.of(
-                        "tipo", "CARPETA",
-                        "idCarpeta", c.getIdCarpeta(),
-                        "nombre", c.getNombre() != null ? c.getNombre() : ""
-                ));
-            }
+        for (Carpeta c : carpetaRepository.findByPropietarioAndEnPapeleraTrue(usuario)) {
+            resultado.add(Map.of(
+                    "tipo", "CARPETA",
+                    "idCarpeta", c.getIdCarpeta(),
+                    "nombre", c.getNombre() != null ? c.getNombre() : ""
+            ));
         }
         return resultado;
     }

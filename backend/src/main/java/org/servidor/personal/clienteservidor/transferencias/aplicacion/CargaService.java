@@ -79,14 +79,10 @@ public class CargaService {
         if (offset > carga.getTamanoEsperado()) throw new IllegalArgumentException("Offset inválido");
         try {
             java.nio.file.Path temp = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
-            byte[] data = input.readAllBytes();
-            if (data.length == 0) return;
-            long nuevo = offset + data.length;
-            if (nuevo > carga.getTamanoEsperado()) {
-                throw new IllegalArgumentException("Excede tamaño esperado");
-            }
-            Files.write(temp, data, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            carga.setOffsetConfirmado(nuevo);
+            almacenamientoService.guardarTemporal(carga.getClaveTemporal(), input, offset, carga.getTamanoEsperado());
+            // Recalcular offset basado en tamaño actual del archivo
+            long tamanoActual = Files.exists(temp) ? Files.size(temp) : 0;
+            carga.setOffsetConfirmado(tamanoActual);
             cargaRepository.save(carga);
         } catch (IllegalArgumentException e) {
             throw e;
