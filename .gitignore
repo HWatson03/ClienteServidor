@@ -1,4 +1,7 @@
 HELP.md
+.env
+backend/.env
+app_movil/.env
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
