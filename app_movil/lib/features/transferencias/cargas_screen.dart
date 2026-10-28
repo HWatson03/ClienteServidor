@@ -51,48 +51,114 @@ class _CargasScreenState extends State<CargasScreen> {
       }
       final cargaId = match.group(1)!;
       
-      // Usar bytes o stream según disponibilidad
       final fileSize = file.size;
       _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
       if (_totalFragmentos == 0) _totalFragmentos = 1;
       
-      List<int> bytes;
-      if (file.bytes != null) {
-        bytes = file.bytes!;
-      } else if (file.path != null) {
-        bytes = await File(file.path!).readAsBytes();
-      } else if (file.readStream != null) {
-        final chunks = <int>[];
-        await for (final chunk in file.readStream!) {
-          chunks.addAll(chunk);
+      // Subir por fragmentos según disponibilidad
+      if (file.path != null) {
+        // Usar RandomAccessFile para no cargar todo en memoria
+        final raf = await File(file.path!).open();
+        try {
+          int offset = 0;
+          while (offset < fileSize) {
+            final fin = (offset + _tamanoFragmento).clamp(0, fileSize);
+            final length = fin - offset;
+            final fragmento = await raf.read(length);
+            
+            _fragmentoActual++;
+            setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
+            
+            final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
+            final request = http.MultipartRequest('PUT', uri);
+            if (token != null) request.headers['Authorization'] = 'Bearer $token';
+            request.files.add(http.MultipartFile.fromBytes('file', fragmento, filename: file.name));
+            final streamed = await request.send();
+            await streamed.stream.bytesToString();
+            
+            if (streamed.statusCode != 200) {
+              setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+              return;
+            }
+            
+            offset = fin;
+          }
+        } finally {
+          await raf.close();
         }
-        bytes = chunks;
+      } else if (file.readStream != null) {
+        // Usar stream directamente sin acumular
+        int offset = 0;
+        final buffer = <int>[];
+        await for (final chunk in file.readStream!) {
+          buffer.addAll(chunk);
+          while (buffer.length >= _tamanoFragmento) {
+            final fragmento = buffer.sublist(0, _tamanoFragmento);
+            buffer.removeRange(0, _tamanoFragmento);
+            
+            _fragmentoActual++;
+            setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
+            
+            final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
+            final request = http.MultipartRequest('PUT', uri);
+            if (token != null) request.headers['Authorization'] = 'Bearer $token';
+            request.files.add(http.MultipartFile.fromBytes('file', fragmento, filename: file.name));
+            final streamed = await request.send();
+            await streamed.stream.bytesToString();
+            
+            if (streamed.statusCode != 200) {
+              setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+              return;
+            }
+            
+            offset += fragmento.length;
+          }
+        }
+        // Enviar resto
+        if (buffer.isNotEmpty) {
+          _fragmentoActual++;
+          setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
+          
+          final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
+          final request = http.MultipartRequest('PUT', uri);
+          if (token != null) request.headers['Authorization'] = 'Bearer $token';
+          request.files.add(http.MultipartFile.fromBytes('file', buffer, filename: file.name));
+          final streamed = await request.send();
+          await streamed.stream.bytesToString();
+          
+          if (streamed.statusCode != 200) {
+            setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+            return;
+          }
+        }
+      } else if (file.bytes != null) {
+        // Bytes ya en memoria - usar directamente
+        final bytes = file.bytes!;
+        int offset = 0;
+        while (offset < bytes.length) {
+          final fin = (offset + _tamanoFragmento).clamp(0, bytes.length);
+          final fragmento = bytes.sublist(offset, fin);
+          
+          _fragmentoActual++;
+          setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
+          
+          final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
+          final request = http.MultipartRequest('PUT', uri);
+          if (token != null) request.headers['Authorization'] = 'Bearer $token';
+          request.files.add(http.MultipartFile.fromBytes('file', fragmento, filename: file.name));
+          final streamed = await request.send();
+          await streamed.stream.bytesToString();
+          
+          if (streamed.statusCode != 200) {
+            setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
+            return;
+          }
+          
+          offset = fin;
+        }
       } else {
         setState(() { _estado = 'No se pudo leer archivo'; _subiendo = false; });
         return;
-      }
-      
-      int offset = 0;
-      while (offset < bytes.length) {
-        final fin = (offset + _tamanoFragmento).clamp(0, bytes.length);
-        final fragmento = bytes.sublist(offset, fin);
-        
-        _fragmentoActual++;
-        setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
-        
-        final uri = Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId/fragmento?offset=$offset');
-        final request = http.MultipartRequest('PUT', uri);
-        if (token != null) request.headers['Authorization'] = 'Bearer $token';
-        request.files.add(http.MultipartFile.fromBytes('file', fragmento, filename: file.name));
-        final streamed = await request.send();
-        await streamed.stream.bytesToString();
-        
-        if (streamed.statusCode != 200) {
-          setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
-          return;
-        }
-        
-        offset = fin;
       }
       
       setState(() { _estado = 'Finalizando...'; });
