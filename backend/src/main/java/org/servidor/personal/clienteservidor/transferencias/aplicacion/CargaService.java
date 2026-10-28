@@ -95,6 +95,7 @@ public class CargaService {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+        if ("EXPIRADA".equals(carga.getEstado())) throw new IllegalStateException("Carga expirada");
         if ("FINALIZADA".equals(carga.getEstado())) {
             return archivoRepository.findByPropietarioAndNombreVisibleAndTamano(usuario, carga.getNombreArchivo(), carga.getTamanoEsperado())
                     .orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
