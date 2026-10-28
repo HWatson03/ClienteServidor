@@ -12,5 +12,6 @@ public interface CarpetaRepository extends JpaRepository<Carpeta, Long> {
     List<Carpeta> findByPropietarioAndPadreAndEnPapeleraFalse(Usuario propietario, Carpeta padre);
     Optional<Carpeta> findByIdCarpetaAndPropietario(Long id, Usuario propietario);
     List<Carpeta> findByPropietarioAndEnPapeleraTrue(Usuario propietario);
+    List<Carpeta> findByPadre(Carpeta padre);
     boolean existsByPropietarioAndPadreAndNombreIgnoreCaseAndEnPapeleraFalse(Usuario propietario, Carpeta padre, String nombre);
 }

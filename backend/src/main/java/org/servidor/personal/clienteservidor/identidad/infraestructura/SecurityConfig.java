@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/registro", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new TokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -67,7 +67,7 @@ public class SecurityConfig {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
-            } else if (!request.getRequestURI().startsWith("/api/auth/registro") && !request.getRequestURI().startsWith("/api/auth/login")) {
+            } else if (!request.getRequestURI().startsWith("/api/auth/login")) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }

@@ -20,6 +20,7 @@ public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
     
     Optional<Archivo> findByIdArchivoAndPropietario(Long id, Usuario propietario);
     Optional<Archivo> findByPropietarioAndNombreVisibleAndTamano(Usuario propietario, String nombreVisible, Long tamano);
+    List<Archivo> findByCarpeta(Carpeta carpeta);
     List<Archivo> findByPropietarioAndEnPapeleraTrue(Usuario propietario);
     boolean existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(Usuario propietario, Carpeta carpeta, String nombreVisible);
 }

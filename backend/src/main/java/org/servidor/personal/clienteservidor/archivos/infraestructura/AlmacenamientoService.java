@@ -83,4 +83,13 @@ public class AlmacenamientoService {
             return false;
         }
     }
+
+    public boolean eliminarPorClave(String clave) {
+        try {
+            Path p = root().resolve(clave);
+            return Files.deleteIfExists(p);
+        } catch (IOException e) {
+            return false;
+        }
+    }
 }

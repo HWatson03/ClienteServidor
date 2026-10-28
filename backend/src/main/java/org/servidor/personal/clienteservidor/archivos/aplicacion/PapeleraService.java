@@ -1,9 +1,11 @@
 package org.servidor.personal.clienteservidor.archivos.aplicacion;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
 import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
 import org.servidor.personal.clienteservidor.archivos.dominio.CuotaUsuario;
+import org.servidor.personal.clienteservidor.archivos.infraestructura.AlmacenamientoService;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.ArchivoRepository;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CuotaUsuarioRepository;
@@ -18,12 +20,14 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PapeleraService {
 
     private final ArchivoRepository archivoRepository;
     private final CarpetaRepository carpetaRepository;
     private final UsuarioRepository usuarioRepository;
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
+    private final AlmacenamientoService almacenamientoService;
 
     @Transactional
     public void enviarArchivoAPapelera(String nombreUsuario, Long archivoId) {
@@ -72,12 +76,36 @@ public class PapeleraService {
             CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
             cuota.setBytesOcupados(Math.max(0, cuota.getBytesOcupados() - archivo.getTamano()));
             cuotaUsuarioRepository.save(cuota);
+            almacenamientoService.eliminarPorClave(archivo.getClaveDisco());
             archivoRepository.delete(archivo);
         } else if ("carpeta".equals(tipo)) {
             Carpeta carpeta = carpetaRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
             if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            // Recursively delete all files and subfolders
+            long bytesLiberados = eliminarCarpetaRecursiva(carpeta, usuario);
+            CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
+            cuota.setBytesOcupados(Math.max(0, cuota.getBytesOcupados() - bytesLiberados));
+            cuotaUsuarioRepository.save(cuota);
             carpetaRepository.delete(carpeta);
         }
+    }
+
+    private long eliminarCarpetaRecursiva(Carpeta carpeta, Usuario usuario) {
+        long bytes = 0;
+        // Delete files in this folder
+        List<Archivo> archivos = archivoRepository.findByCarpeta(carpeta);
+        for (Archivo a : archivos) {
+            bytes += a.getTamano() != null ? a.getTamano() : 0;
+            almacenamientoService.eliminarPorClave(a.getClaveDisco());
+            archivoRepository.delete(a);
+        }
+        // Recurse into subfolders
+        List<Carpeta> subcarpetas = carpetaRepository.findByPadre(carpeta);
+        for (Carpeta sub : subcarpetas) {
+            bytes += eliminarCarpetaRecursiva(sub, usuario);
+            carpetaRepository.delete(sub);
+        }
+        return bytes;
     }
 
     private Usuario obtenerUsuario(String nombreUsuario) {
