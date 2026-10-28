@@ -319,3 +319,60 @@ Las decisiones de funcionalidad anteriores quedan cerradas. Solo falta concretar
 5. Preservar cambios ajenos y escribir commits en español.
 6. Reportar archivos, comportamiento, comprobaciones y decisiones pendientes; no marcar tareas completas sin evidencia.
 7. Respetar las decisiones de la sección 7. Resolver los detalles operativos en E07 sin detener trabajo independiente.
+
+## 6. Estado de implementación (matriz)
+
+### Implementado
+| Función | Estado | Notas |
+| --- | --- | --- |
+| Registro abierto por nombre/contraseña | Implementado | Sin admin ni recuperación por correo. Requiere red confiable. |
+| Login y sesiones (máx 3) | Implementado | Serialización por usuario, revocación al cambiar contraseña. |
+| Token Bearer + filtro auth | Implementado | TokenService con transacción. |
+| Explorador (listar/buscar por nombre) | Implementado | Paginación, búsqueda case-insensitive. |
+| Renombrar archivos/carpetas | Implementado | |
+| Crear carpetas | Implementado | Resolución de conflictos de nombres. |
+| Cuota (ocupados/reservados) | Implementado | Concurrencia por usuario. |
+| Resumen de espacio | Implementado | |
+| Cargas reanudables (fragmentos) | Implementado | Offset confirmado por servidor, validación de tamaño. |
+| Consulta de carga (GET) | Implementado | Cliente consulta offset del servidor al reanudar. |
+| Copia de archivos con progreso | Implementado | Reserva/liberación de cuota. |
+| Papelera (enviar/restaurar/borrar) | Implementado | Para archivos. Carpetas parcial. |
+| Purga periódica de cargas | Implementado | Cron diario. |
+| Biometría (Android) | Base | local_auth configurado. |
+| Publicación HTTPS | Documentado | Túneles/reverse proxy open source. |
+| Respaldos PostgreSQL | Script | backup_postgres.sh, cron manual. |
+| Android APK | Generado | app-debug.apk. |
+| Windows/Linux/Web config | Configurado | Documentación y plataforma_config. |
+
+### Parcial
+| Función | Estado | Pendiente |
+| --- | --- | --- |
+| Papelera de carpetas | Parcial | Envío/restauración recursiva y purga verificados; falta integración completa en UI. |
+| Copia de árboles | Parcial | Solo archivos individuales; falta copia recursiva de carpetas. |
+| Descarga de archivos | Parcial | Falta endpoint de contenido/streaming y previsualización JPEG/PNG. |
+| Movimiento de archivos/carpetas | Parcial | Falta endpoint y lógica de mover entre carpetas. |
+| Vaciado de papelera | Parcial | Falta endpoint DELETE /api/papelera. |
+| Segundo plano Android | Parcial | Base implementada; falta prueba en dispositivo real. |
+| Reanudación tras cierre de app | Parcial | Persiste cargaId/offset; falta prueba completa. |
+
+### Pendiente
+| Función | Notas |
+| --- | --- |
+| Endpoint de descarga/contenido | GET /api/archivos/{id}/contenido |
+| Movimiento de archivos/carpetas | PATCH con carpetaDestinoId |
+| Copia recursiva de carpetas | Copiar árbol completo |
+| Vaciado completo de papelera | DELETE /api/papelera |
+| Espacio físico libre en disco | Verificar antes de reservar |
+| Recuperación ante fallos DB/disco | Conciliación tras reinicios |
+| HTTPS en producción | Configurar túnel/reverse proxy |
+| Respaldos automatizados | Cron programado |
+| Pruebas en dispositivo Android real | Segundo plano, biometría |
+
+### Política de registro
+
+El registro es **abierto** por nombre de usuario y contraseña, sin administrador ni recuperación por correo, según el plan original. Para despliegues privados, se recomienda:
+- Colocar el servidor detrás de VPN o firewall
+- Deshabilitar el registro público si no se necesita (variable de entorno o configuración futura)
+- El bootstrap crea el primer usuario si la base está vacía, usando `BOOTSTRAP_USUARIO` y `BOOTSTRAP_CONTRASENA`
+
+No se requiere invitación ni administrador para el MVP.
