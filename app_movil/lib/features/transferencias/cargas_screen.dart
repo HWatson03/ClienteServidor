@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:admin/core/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,8 +21,8 @@ class _CargasScreenState extends State<CargasScreen> {
   int _totalFragmentos = 0;
   static const int _tamanoFragmento = 512 * 1024; // 512KB
   int _carpetaDestinoId = 1;
+  String? _nombreCarpetaDestino;
   String? _cargaIdPendiente;
-  int _offsetPendiente = 0;
 
   @override
   void initState() {
@@ -37,7 +38,6 @@ class _CargasScreenState extends State<CargasScreen> {
     if (cargaId != null) {
       setState(() {
         _cargaIdPendiente = cargaId;
-        _offsetPendiente = offset;
         _carpetaDestinoId = carpeta;
         _estado = 'Carga pendiente: $cargaId (offset $offset)';
       });
@@ -58,6 +58,51 @@ class _CargasScreenState extends State<CargasScreen> {
     await prefs.remove('carga_pendiente_carpeta');
   }
 
+  Future<int> _consultarOffsetServidor(String cargaId) async {
+    final token = await _apiClient.getToken();
+    final resp = await http.get(
+      Uri.parse('${ApiClient.baseUrl}/api/cargas/$cargaId'),
+      headers: {
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['offsetConfirmado'] ?? 0;
+    }
+    return 0;
+  }
+
+  Future<void> _seleccionarCarpeta() async {
+    final token = await _apiClient.getToken();
+    final resp = await http.get(
+      Uri.parse('${ApiClient.baseUrl}/api/carpetas'),
+      headers: {
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (resp.statusCode != 200) return;
+    final List<dynamic> carpetas = jsonDecode(resp.body);
+    
+    if (!mounted) return;
+    final seleccion = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Seleccionar carpeta'),
+        children: carpetas.map((c) => SimpleDialogOption(
+          onPressed: () => Navigator.pop(ctx, c),
+          child: Text(c['nombre'] ?? 'Carpeta ${c['idCarpeta']}'),
+        )).toList(),
+      ),
+    );
+    if (seleccion != null) {
+      setState(() {
+        _carpetaDestinoId = seleccion['idCarpeta'];
+        _nombreCarpetaDestino = seleccion['nombre'];
+      });
+    }
+  }
+
   Future<void> _seleccionarYSubir() async {
     final result = await FilePicker.platform.pickFiles(withReadStream: true);
     if (result == null) return;
@@ -68,7 +113,6 @@ class _CargasScreenState extends State<CargasScreen> {
     try {
       final token = await _apiClient.getToken();
       
-      // Iniciar carga
       final resp = await _apiClient.post('/api/cargas', {
         'carpetaDestinoId': _carpetaDestinoId,
         'nombreArchivo': file.name,
@@ -102,11 +146,14 @@ class _CargasScreenState extends State<CargasScreen> {
     if (result == null) return;
     final file = result.files.single;
     
-    setState(() { _subiendo = true; _estado = 'Reanudando...'; });
+    setState(() { _subiendo = true; _estado = 'Consultando offset del servidor...'; });
     
     try {
       final token = await _apiClient.getToken();
-      await _subirArchivo(file, _cargaIdPendiente!, token, _offsetPendiente);
+      // Consultar offset confirmado por el servidor
+      final offsetServidor = await _consultarOffsetServidor(_cargaIdPendiente!);
+      setState(() { _estado = 'Reanudando desde offset $offsetServidor...'; });
+      await _subirArchivo(file, _cargaIdPendiente!, token, offsetServidor);
     } catch (e) {
       setState(() { _estado = 'Error: $e'; });
     } finally {
@@ -115,7 +162,7 @@ class _CargasScreenState extends State<CargasScreen> {
   }
 
   Future<void> _subirArchivo(dynamic file, String cargaId, String? token, int offsetInicial) async {
-    final fileSize = file.size;
+    final fileSize = file.size as int;
     if (fileSize == 0) {
       _totalFragmentos = 0;
     } else {
@@ -124,8 +171,9 @@ class _CargasScreenState extends State<CargasScreen> {
     }
     
     int offset = offsetInicial;
+    _fragmentoActual = offsetInicial > 0 ? (offsetInicial / _tamanoFragmento).ceil() : 0;
     
-    if (fileSize > 0) {
+    if (fileSize > 0 && offset < fileSize) {
       if (file.path != null) {
         final raf = await File(file.path!).open();
         try {
@@ -151,18 +199,17 @@ class _CargasScreenState extends State<CargasScreen> {
               return;
             }
             
-            offset = fin as int;
+            offset = fin;
             await _guardarPendiente(cargaId, offset, _carpetaDestinoId);
           }
         } finally {
           await raf.close();
         }
       } else if (file.readStream != null) {
-        // Skip already uploaded bytes
         int skipped = 0;
         final buffer = <int>[];
         await for (final chunk in file.readStream!) {
-          if (skipped + chunk.length <= offset) {
+          if (skipped + (chunk.length as int) <= offset) {
             skipped += chunk.length as int;
             continue;
           }
@@ -210,7 +257,7 @@ class _CargasScreenState extends State<CargasScreen> {
             setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
             return;
           }
-          offset += buffer.length as int;
+          offset += buffer.length;
           await _guardarPendiente(cargaId, offset, _carpetaDestinoId);
         }
       } else if (file.bytes != null) {
@@ -236,7 +283,7 @@ class _CargasScreenState extends State<CargasScreen> {
             return;
           }
           
-          i = fin as int;
+          i = fin;
           await _guardarPendiente(cargaId, i, _carpetaDestinoId);
         }
         offset = bytes.length;
@@ -272,10 +319,18 @@ class _CargasScreenState extends State<CargasScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(
-              decoration: InputDecoration(labelText: 'Carpeta destino ID'),
-              keyboardType: TextInputType.number,
-              onChanged: (v) => _carpetaDestinoId = int.tryParse(v) ?? 1,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(_nombreCarpetaDestino != null
+                      ? 'Carpeta: $_nombreCarpetaDestino (ID: $_carpetaDestinoId)'
+                      : 'Carpeta destino ID: $_carpetaDestinoId'),
+                ),
+                ElevatedButton(
+                  onPressed: _subiendo ? null : _seleccionarCarpeta,
+                  child: Text('Elegir'),
+                ),
+              ],
             ),
             SizedBox(height: 16),
             ElevatedButton(
