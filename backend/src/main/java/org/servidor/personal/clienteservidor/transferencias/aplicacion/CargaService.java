@@ -75,6 +75,7 @@ public class CargaService {
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) return;
+        if ("EXPIRADA".equals(carga.getEstado())) throw new IllegalStateException("Carga expirada");
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
         if (offset > carga.getTamanoEsperado()) throw new IllegalArgumentException("Offset inválido");
         try {
