@@ -14,3 +14,8 @@ flutter build web --release
 
 Despliegue:
 Subir build/web/ al servidor web
+
+Uso:
+- Compilar con API_BASE_URL si backend en otro origen: flutter build web --dart-define=API_BASE_URL=https://tu-servidor
+- Configurar CORS en backend para origen del sitio
+- Usar HTTPS para evitar contenido mixto

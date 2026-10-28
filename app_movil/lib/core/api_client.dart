@@ -1,9 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8080';
+  static String get baseUrl {
+    if (kIsWeb) {
+      const String base = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+      if (base.isNotEmpty) return base;
+      return Uri.base.origin;
+    }
+    return const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+  }
   
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

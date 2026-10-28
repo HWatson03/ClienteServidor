@@ -80,8 +80,11 @@ public class CargaService {
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
         try {
             java.nio.file.Path temp = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
-            Files.write(temp, input.readAllBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            carga.setOffsetConfirmado(carga.getOffsetConfirmado());
+            byte[] data = input.readAllBytes();
+            if (data.length > 0) {
+                Files.write(temp, data, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            }
+            carga.setOffsetConfirmado(offset + data.length);
             cargaRepository.save(carga);
         } catch (Exception e) {
             throw new IllegalStateException("Error al guardar fragmento", e);
@@ -94,7 +97,17 @@ public class CargaService {
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) {
-            return archivoRepository.findAll().stream().findFirst().orElseThrow();
+            for (Archivo a : archivoRepository.findAll()) {
+                if (a.getPropietario() != null && usuario.getIdUsuario().equals(a.getPropietario().getIdUsuario()) 
+                    && a.getNombreVisible() != null && a.getNombreVisible().equals(carga.getNombreArchivo()) 
+                    && carga.getTamanoEsperado().equals(a.getTamano())) {
+                    return a;
+                }
+            }
+            throw new IllegalArgumentException("Archivo no encontrado");
+        }
+        if (carga.getOffsetConfirmado() != carga.getTamanoEsperado()) {
+            throw new IllegalArgumentException("Carga incompleta");
         }
         try {
             String claveFinal = UUID.randomUUID().toString();

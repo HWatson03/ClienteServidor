@@ -32,10 +32,12 @@ class _PapeleraScreenState extends State<PapeleraScreen> {
     }
   }
 
-  Future<void> _restaurar(int id) async {
+  Future<void> _restaurar(Map<String, dynamic> item) async {
     final prefs = await SharedPreferences.getInstance();
     final usuario = prefs.getString('nombreUsuario') ?? '';
-    await _apiClient.post('/api/papelera/archivo/$id/restaurar?nombreUsuario=$usuario', {});
+    final tipo = item['tipo'] == 'CARPETA' ? 'carpeta' : 'archivo';
+    final id = item['tipo'] == 'CARPETA' ? (item['idCarpeta'] ?? item['id'] ?? 0) : (item['idArchivo'] ?? item['id'] ?? 0);
+    await _apiClient.post('/api/papelera/$tipo/$id/restaurar?nombreUsuario=$usuario', {});
     _cargar();
   }
 
@@ -52,7 +54,7 @@ class _PapeleraScreenState extends State<PapeleraScreen> {
             title: Text(item['nombreVisible'] ?? item['nombre'] ?? ''),
             trailing: IconButton(
               icon: Icon(Icons.restore),
-              onPressed: () => _restaurar(item['idArchivo'] ?? item['id'] ?? 0),
+              onPressed: () => _restaurar(item),
             ),
           );
         },

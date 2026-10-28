@@ -53,21 +53,25 @@ public class CopiaService {
         tarea.setEstado("EN_PROCESO");
         tareaCopiaRepository.save(tarea);
 
+        String claveFinal = UUID.randomUUID().toString();
         try {
-            String claveFinal = UUID.randomUUID().toString();
-            java.nio.file.Files.copy(almacenamientoService.obtenerTemporal(origen.getClaveDisco()), almacenamientoService.obtenerTemporal(claveFinal));
+            java.nio.file.Files.copy(java.nio.file.Paths.get("storage").resolve(origen.getClaveDisco()), java.nio.file.Paths.get("storage").resolve(claveFinal));
         } catch (Exception e) {
-            tarea.setEstado("FALLIDO");
-            tarea.setError(e.getMessage());
-            tareaCopiaRepository.save(tarea);
-            throw new IllegalStateException("Error al copiar archivo", e);
+            try {
+                java.nio.file.Files.copy(almacenamientoService.obtenerTemporal(origen.getClaveDisco()), java.nio.file.Paths.get("storage").resolve(claveFinal));
+            } catch (Exception ex) {
+                tarea.setEstado("FALLIDO");
+                tarea.setError(ex.getMessage());
+                tareaCopiaRepository.save(tarea);
+                throw new IllegalStateException("Error al copiar archivo", ex);
+            }
         }
 
         Archivo copia = new Archivo();
         copia.setPropietario(usuario);
         copia.setCarpeta(destino);
         copia.setNombreVisible(origen.getNombreVisible());
-        copia.setClaveDisco(UUID.randomUUID().toString());
+        copia.setClaveDisco(claveFinal);
         copia.setTamano(origen.getTamano());
         copia.setTipoMime(origen.getTipoMime());
         copia.setEnPapelera(false);
