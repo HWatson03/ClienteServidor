@@ -47,8 +47,8 @@ Rotación configurable con logback.
 
 Para crear el primer usuario en una base vacía, define las variables de entorno antes de arrancar:
 ```
-APP_BOOTSTRAP_USUARIO=admin
-APP_BOOTSTRAP_CONTRASENA=claveSegura123
+BOOTSTRAP_USUARIO=admin
+BOOTSTRAP_CONTRASENA=claveSegura123
 ```
 O en application.properties:
 ```

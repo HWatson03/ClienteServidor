@@ -76,7 +76,7 @@ public class PapeleraService {
             if (!archivo.isEnPapelera()) throw new IllegalArgumentException("El archivo no está en la papelera");
             boolean eliminado = almacenamientoService.eliminarPorClave(archivo.getClaveDisco());
             if (!eliminado) {
-                log.warn("No se pudo eliminar archivo del disco: {}", archivo.getClaveDisco());
+                throw new IllegalStateException("No se pudo eliminar el archivo del disco: " + archivo.getClaveDisco());
             }
             CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
             cuota.setBytesOcupados(Math.max(0, cuota.getBytesOcupados() - archivo.getTamano()));
@@ -102,7 +102,10 @@ public class PapeleraService {
         List<Archivo> archivos = archivoRepository.findByCarpeta(carpeta);
         for (Archivo a : archivos) {
             bytes += a.getTamano() != null ? a.getTamano() : 0;
-            almacenamientoService.eliminarPorClave(a.getClaveDisco());
+            boolean eliminado = almacenamientoService.eliminarPorClave(a.getClaveDisco());
+            if (!eliminado) {
+                throw new IllegalStateException("No se pudo eliminar el archivo del disco: " + a.getClaveDisco());
+            }
             archivoRepository.delete(a);
         }
         // Recurse into subfolders
