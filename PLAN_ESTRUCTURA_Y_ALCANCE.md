@@ -335,8 +335,8 @@ Las decisiones de funcionalidad anteriores quedan cerradas. Solo falta concretar
 | Resumen de espacio | Implementado | |
 | Cargas reanudables (fragmentos) | Implementado | Offset confirmado por servidor, validación de tamaño. |
 | Consulta de carga (GET) | Implementado | Cliente consulta offset del servidor al reanudar. |
-| Copia de archivos con progreso | Implementado | Reserva/liberación de cuota. |
-| Papelera (enviar/restaurar/borrar) | Implementado | Para archivos. Carpetas parcial. |
+| Copia de archivos con progreso | Parcial | Files.copy síncrono; progreso solo al finalizar. |
+| Papelera de archivos (enviar/restaurar/borrar) | Implementado | Archivos individuales. |
 | Purga periódica de cargas | Implementado | Cron diario. |
 | Biometría (Android) | Base | local_auth configurado. |
 | Publicación HTTPS | Documentado | Túneles/reverse proxy open source. |
@@ -347,7 +347,7 @@ Las decisiones de funcionalidad anteriores quedan cerradas. Solo falta concretar
 ### Parcial
 | Función | Estado | Pendiente |
 | --- | --- | --- |
-| Papelera de carpetas | Parcial | Envío/restauración recursiva y purga verificados; falta integración completa en UI. |
+| Papelera de carpetas | Parcial | Restauración y purga recursivas; falta envío a papelera de carpetas (solo archivos). |
 | Copia de árboles | Parcial | Solo archivos individuales; falta copia recursiva de carpetas. |
 | Descarga de archivos | Parcial | Falta endpoint de contenido/streaming y previsualización JPEG/PNG. |
 | Movimiento de archivos/carpetas | Parcial | Falta endpoint y lógica de mover entre carpetas. |
@@ -362,6 +362,7 @@ Las decisiones de funcionalidad anteriores quedan cerradas. Solo falta concretar
 | Movimiento de archivos/carpetas | PATCH con carpetaDestinoId |
 | Copia recursiva de carpetas | Copiar árbol completo |
 | Vaciado completo de papelera | DELETE /api/papelera |
+| Envío de carpetas a papelera | Solo archivos tienen endpoint; carpetas no. |
 | Espacio físico libre en disco | Verificar antes de reservar |
 | Recuperación ante fallos DB/disco | Conciliación tras reinicios |
 | HTTPS en producción | Configurar túnel/reverse proxy |
