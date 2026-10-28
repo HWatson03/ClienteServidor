@@ -27,9 +27,7 @@ public class LimpiadorCargasService {
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void limpiarCargasExpiradas() {
-        List<Carga> expiradas = cargaRepository.findAll().stream()
-                .filter(c -> !"FINALIZADA".equals(c.getEstado()) && c.getExpiraEn().isBefore(LocalDateTime.now()))
-                .toList();
+        List<Carga> expiradas = cargaRepository.findExpiradas(LocalDateTime.now());
         for (Carga carga : expiradas) {
             boolean cuotaLiberada = false;
             try {
@@ -42,7 +40,10 @@ public class LimpiadorCargasService {
             }
             // Eliminar temporal
             Path temp = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
-            almacenamientoService.eliminar(temp);
+            boolean eliminado = almacenamientoService.eliminar(temp);
+            if (!eliminado) {
+                log.warn("No se pudo eliminar temporal de carga {}", carga.getIdCarga());
+            }
             // Marcar como expirada solo si cuota se liberó
             if (cuotaLiberada) {
                 carga.setEstado("EXPIRADA");

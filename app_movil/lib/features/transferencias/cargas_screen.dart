@@ -52,11 +52,18 @@ class _CargasScreenState extends State<CargasScreen> {
       final cargaId = match.group(1)!;
       
       final fileSize = file.size;
-      _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
-      if (_totalFragmentos == 0) _totalFragmentos = 1;
+      if (fileSize == 0) {
+        // Empty file: skip fragments, go straight to finalize
+        _totalFragmentos = 0;
+      } else {
+        _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
+        if (_totalFragmentos == 0) _totalFragmentos = 1;
+      }
       
       // Subir por fragmentos según disponibilidad
-      if (file.path != null) {
+      if (fileSize == 0) {
+        // Empty file: no fragments to upload
+      } else if (file.path != null) {
         // Usar RandomAccessFile para no cargar todo en memoria
         final raf = await File(file.path!).open();
         try {

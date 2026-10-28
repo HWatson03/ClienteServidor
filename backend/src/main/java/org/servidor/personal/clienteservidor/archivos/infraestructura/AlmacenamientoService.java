@@ -68,13 +68,19 @@ public class AlmacenamientoService {
         Path origen = temp().resolve(claveTemporal);
         Path destino = root().resolve(claveFinal);
         Files.createDirectories(destino.getParent());
-        Files.move(origen, destino);
+        if (Files.exists(origen)) {
+            Files.move(origen, destino);
+        } else {
+            // Empty file: create empty destination
+            Files.createFile(destino);
+        }
     }
 
-    public void eliminar(Path path) {
+    public boolean eliminar(Path path) {
         try {
-            Files.deleteIfExists(path);
-        } catch (IOException ignored) {
+            return Files.deleteIfExists(path);
+        } catch (IOException e) {
+            return false;
         }
     }
 }

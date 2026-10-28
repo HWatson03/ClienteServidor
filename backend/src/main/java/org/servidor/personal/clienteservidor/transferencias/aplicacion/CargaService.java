@@ -96,14 +96,8 @@ public class CargaService {
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) {
-            for (Archivo a : archivoRepository.findAll()) {
-                if (a.getPropietario() != null && usuario.getIdUsuario().equals(a.getPropietario().getIdUsuario()) 
-                    && a.getNombreVisible() != null && a.getNombreVisible().equals(carga.getNombreArchivo()) 
-                    && carga.getTamanoEsperado().equals(a.getTamano())) {
-                    return a;
-                }
-            }
-            throw new IllegalArgumentException("Archivo no encontrado");
+            return archivoRepository.findByPropietarioAndNombreVisibleAndTamano(usuario, carga.getNombreArchivo(), carga.getTamanoEsperado())
+                    .orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
         }
         if (carga.getOffsetConfirmado() != carga.getTamanoEsperado()) {
             throw new IllegalArgumentException("Carga incompleta");
