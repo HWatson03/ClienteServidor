@@ -15,6 +15,9 @@ import org.servidor.personal.clienteservidor.transferencias.infraestructura.Tare
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 @Service
@@ -27,6 +30,7 @@ public class CopiaService {
     private final UsuarioRepository usuarioRepository;
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
     private final AlmacenamientoService almacenamientoService;
+    private final org.servidor.personal.clienteservidor.archivos.infraestructura.AlmacenamientoProperties almacenamientoProperties;
 
     @Transactional
     public TareaCopia copiarArchivo(String nombreUsuario, Long archivoId, Long carpetaDestinoId) {
@@ -55,16 +59,15 @@ public class CopiaService {
 
         String claveFinal = UUID.randomUUID().toString();
         try {
-            java.nio.file.Files.copy(java.nio.file.Paths.get("storage").resolve(origen.getClaveDisco()), java.nio.file.Paths.get("storage").resolve(claveFinal));
-        } catch (Exception e) {
-            try {
-                java.nio.file.Files.copy(almacenamientoService.obtenerTemporal(origen.getClaveDisco()), java.nio.file.Paths.get("storage").resolve(claveFinal));
-            } catch (Exception ex) {
-                tarea.setEstado("FALLIDO");
-                tarea.setError(ex.getMessage());
-                tareaCopiaRepository.save(tarea);
-                throw new IllegalStateException("Error al copiar archivo", ex);
-            }
+            Path origenPath = obtenerRutaFinal(origen.getClaveDisco());
+            Path destinoPath = obtenerRutaFinal(claveFinal);
+            Files.createDirectories(destinoPath.getParent());
+            Files.copy(origenPath, destinoPath);
+        } catch (Exception ex) {
+            tarea.setEstado("FALLIDO");
+            tarea.setError(ex.getMessage());
+            tareaCopiaRepository.save(tarea);
+            throw new IllegalStateException("Error al copiar archivo", ex);
         }
 
         Archivo copia = new Archivo();
@@ -89,6 +92,17 @@ public class CopiaService {
         tarea.setEstado("COMPLETADO");
         tareaCopiaRepository.save(tarea);
         return tarea;
+    }
+
+    private Path obtenerRutaFinal(String clave) {
+        Path root = Paths.get(almacenamientoProperties.getRoot());
+        Path p1 = root.resolve(clave);
+        if (Files.exists(p1)) return p1;
+        Path p2 = Paths.get("storage").resolve(clave);
+        if (Files.exists(p2)) return p2;
+        Path p3 = almacenamientoService.obtenerTemporal(clave);
+        if (Files.exists(p3)) return p3;
+        return p1;
     }
 
     @Transactional(readOnly = true)

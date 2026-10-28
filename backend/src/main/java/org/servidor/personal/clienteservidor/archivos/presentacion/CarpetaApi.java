@@ -4,7 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.servidor.personal.clienteservidor.archivos.aplicacion.CarpetaService;
 import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
-import org.servidor.personal.clienteservidor.archivos.presentacion.dto.*;
+import org.servidor.personal.clienteservidor.archivos.presentacion.dto.CarpetaResponse;
+import org.servidor.personal.clienteservidor.archivos.presentacion.dto.CrearCarpetaRequest;
+import org.servidor.personal.clienteservidor.archivos.presentacion.dto.RenombrarRequest;
+import org.servidor.personal.clienteservidor.infraestructura.AutenticacionUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CarpetaApi {
     private final CarpetaService carpetaService;
-    @GetMapping public List<CarpetaResponse> listar(@RequestParam String nombreUsuario, @RequestParam(required = false) Long carpetaId) { return carpetaService.listarCarpetas(nombreUsuario, carpetaId).stream().map(CarpetaApi::response).toList(); }
-    @PostMapping public CarpetaResponse crear(@RequestParam String nombreUsuario, @Valid @RequestBody CrearCarpetaRequest request) { return response(carpetaService.crearCarpeta(nombreUsuario, request.carpetaPadreId(), request.nombre())); }
-    private static CarpetaResponse response(Carpeta carpeta) { return new CarpetaResponse(carpeta.getIdCarpeta(), carpeta.getNombre(), carpeta.getPadre() == null ? null : carpeta.getPadre().getIdCarpeta()); }
+    private final AutenticacionUtil autenticacionUtil;
+    @GetMapping public List<CarpetaResponse> listar(@RequestParam(required = false) Long padreId) { List<Carpeta> carpetas = carpetaService.listarCarpetas(autenticacionUtil.nombreUsuarioAutenticado(), padreId); return carpetas.stream().map(c -> new CarpetaResponse(c.getIdCarpeta(), c.getNombre(), c.getPadre() != null ? c.getPadre().getIdCarpeta() : null)).toList(); }
+    @PostMapping public void crear(@Valid @RequestBody CrearCarpetaRequest request) { carpetaService.crearCarpeta(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaPadreId(), request.nombre()); }
+    @PatchMapping("/{id}") public void renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { carpetaService.renombrarCarpeta(autenticacionUtil.nombreUsuarioAutenticado(), id, request.nombre()); }
 }

@@ -8,6 +8,7 @@ import org.servidor.personal.clienteservidor.archivos.infraestructura.ArchivoRep
 import org.servidor.personal.clienteservidor.archivos.infraestructura.CarpetaRepository;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.UsuarioRepository;
+import org.servidor.personal.clienteservidor.infraestructura.AutenticacionUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -22,10 +23,11 @@ public class PapeleraApi {
     private final UsuarioRepository usuarioRepository;
     private final ArchivoRepository archivoRepository;
     private final CarpetaRepository carpetaRepository;
+    private final AutenticacionUtil autenticacionUtil;
 
     @GetMapping
-    public List<Map<String, Object>> listar(@RequestParam String nombreUsuario) {
-        Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
+    public List<Map<String, Object>> listar() {
+        Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase(autenticacionUtil.nombreUsuarioAutenticado().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
         List<Map<String, Object>> resultado = new ArrayList<>();
         for (Archivo a : archivoRepository.findAll()) {
@@ -50,7 +52,7 @@ public class PapeleraApi {
         return resultado;
     }
 
-    @DeleteMapping("/archivos/{id}") public void enviarAPapelera(@RequestParam String nombreUsuario, @PathVariable Long id) { papeleraService.enviarArchivoAPapelera(nombreUsuario, id); }
-    @PostMapping("/{tipo}/{id}/restaurar") public void restaurar(@RequestParam String nombreUsuario, @PathVariable String tipo, @PathVariable Long id) { papeleraService.restaurar(nombreUsuario, tipo, id); }
-    @DeleteMapping("/{tipo}/{id}") public void eliminarDefinitivamente(@RequestParam String nombreUsuario, @PathVariable String tipo, @PathVariable Long id) { papeleraService.eliminarDefinitivamente(nombreUsuario, tipo, id); }
+    @DeleteMapping("/archivos/{id}") public void enviarAPapelera(@PathVariable Long id) { papeleraService.enviarArchivoAPapelera(autenticacionUtil.nombreUsuarioAutenticado(), id); }
+    @PostMapping("/{tipo}/{id}/restaurar") public void restaurar(@PathVariable String tipo, @PathVariable Long id) { papeleraService.restaurar(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id); }
+    @DeleteMapping("/{tipo}/{id}") public void eliminarDefinitivamente(@PathVariable String tipo, @PathVariable Long id) { papeleraService.eliminarDefinitivamente(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id); }
 }

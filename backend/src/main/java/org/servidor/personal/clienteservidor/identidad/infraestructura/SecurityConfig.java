@@ -1,6 +1,7 @@
 package org.servidor.personal.clienteservidor.identidad.infraestructura;
 
 import org.servidor.personal.clienteservidor.identidad.aplicacion.TokenService;
+import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,11 +57,19 @@ public class SecurityConfig {
             String auth = request.getHeader("Authorization");
             if (auth != null && auth.startsWith("Bearer ")) {
                 String token = auth.substring(7);
-                var usuario = tokenService.validarToken(token);
-                if (usuario.isPresent()) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario.get().getNombreUsuario(), null, Collections.emptyList());
+                var usuarioOpt = tokenService.validarToken(token);
+                if (usuarioOpt.isPresent()) {
+                    Usuario usuario = usuarioOpt.get();
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario.getNombreUsuario(), null, Collections.emptyList());
+                    authentication.setDetails(usuario);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
                 }
+            } else if (!request.getRequestURI().startsWith("/api/auth/registro") && !request.getRequestURI().startsWith("/api/auth/login")) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
             }
             filterChain.doFilter(request, response);
         }

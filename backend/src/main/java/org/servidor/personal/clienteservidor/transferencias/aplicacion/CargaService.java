@@ -32,8 +32,6 @@ public class CargaService {
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
     private final AlmacenamientoService almacenamientoService;
 
-
-
     @Transactional
     public Carga iniciar(String nombreUsuario, Long carpetaDestinoId, String nombreArchivo, long tamanoEsperado) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
@@ -78,14 +76,20 @@ public class CargaService {
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("FINALIZADA".equals(carga.getEstado())) return;
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
+        if (offset > carga.getTamanoEsperado()) throw new IllegalArgumentException("Offset inválido");
         try {
             java.nio.file.Path temp = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
             byte[] data = input.readAllBytes();
-            if (data.length > 0) {
-                Files.write(temp, data, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            if (data.length == 0) return;
+            long nuevo = offset + data.length;
+            if (nuevo > carga.getTamanoEsperado()) {
+                throw new IllegalArgumentException("Excede tamaño esperado");
             }
-            carga.setOffsetConfirmado(offset + data.length);
+            Files.write(temp, data, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            carga.setOffsetConfirmado(nuevo);
             cargaRepository.save(carga);
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalStateException("Error al guardar fragmento", e);
         }

@@ -5,6 +5,7 @@ import org.servidor.personal.clienteservidor.identidad.dominio.Sesion;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import org.servidor.personal.clienteservidor.identidad.infraestructura.SesionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,6 +17,7 @@ import java.util.Optional;
 public class TokenService {
     private final SesionRepository sesionRepository;
 
+    @Transactional(readOnly = true)
     public Optional<Usuario> validarToken(String token) {
         if (token == null || token.isBlank()) {
             return Optional.empty();
@@ -29,7 +31,10 @@ public class TokenService {
         if (sesion.isRevocada() || sesion.getExpiraEn().isBefore(LocalDateTime.now())) {
             return Optional.empty();
         }
-        return Optional.of(sesion.getUsuario());
+        Usuario usuario = sesion.getUsuario();
+        // Force load lazy relation
+        usuario.getNombreUsuario();
+        return Optional.of(usuario);
     }
 
     private String hash(String token) {

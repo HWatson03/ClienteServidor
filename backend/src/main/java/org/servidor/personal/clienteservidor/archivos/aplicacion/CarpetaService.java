@@ -17,8 +17,6 @@ public class CarpetaService {
     private final CarpetaRepository carpetaRepository;
     private final UsuarioRepository usuarioRepository;
 
-
-
     @Transactional(readOnly = true)
     public Carpeta obtenerRaiz(String nombreUsuario) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
@@ -61,6 +59,29 @@ public class CarpetaService {
             }
             contador++;
         }
+    }
+
+    @Transactional
+    public void renombrarCarpeta(String nombreUsuario, Long carpetaId, String nombre) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        Carpeta carpeta = obtenerCarpetaPropia(usuario, carpetaId);
+        if (carpeta.isEsRaiz()) throw new IllegalArgumentException("No se puede renombrar la raíz");
+        String nombreFinal = resolverNombreUnico(usuario, carpeta.getPadre(), nombre);
+        carpeta.setNombre(nombreFinal);
+        carpetaRepository.save(carpeta);
+    }
+
+    @Transactional
+    public void renombrar(String nombreUsuario, Long carpetaId, String nombre) {
+        renombrarCarpeta(nombreUsuario, carpetaId, nombre);
+    }
+
+    public List<Carpeta> listar(String nombreUsuario, Long carpetaId) {
+        return listarCarpetas(nombreUsuario, carpetaId);
+    }
+
+    public Carpeta crear(String nombreUsuario, Long carpetaPadreId, String nombre) {
+        return crearCarpeta(nombreUsuario, carpetaPadreId, nombre);
     }
 
     private Usuario obtenerUsuario(String nombreUsuario) {

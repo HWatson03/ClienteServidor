@@ -2,21 +2,26 @@ package org.servidor.personal.clienteservidor.transferencias.presentacion;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
+import org.servidor.personal.clienteservidor.infraestructura.AutenticacionUtil;
 import org.servidor.personal.clienteservidor.transferencias.aplicacion.CargaService;
 import org.servidor.personal.clienteservidor.transferencias.dominio.Carga;
-import org.servidor.personal.clienteservidor.transferencias.presentacion.dto.*;
+import org.servidor.personal.clienteservidor.transferencias.presentacion.dto.CargaResponse;
+import org.servidor.personal.clienteservidor.transferencias.presentacion.dto.IniciarCargaRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/cargas")
 @RequiredArgsConstructor
 public class CargaApi {
     private final CargaService cargaService;
-    @PostMapping public CargaResponse iniciar(@RequestParam String nombreUsuario, @Valid @RequestBody IniciarCargaRequest request) { Carga c = cargaService.iniciar(nombreUsuario, request.carpetaDestinoId(), request.nombreArchivo(), request.tamanoEsperado()); return response(c); }
-    @GetMapping("/{id}") public CargaResponse consultar(@RequestParam String nombreUsuario, @PathVariable Long id) { return response(cargaService.consultar(nombreUsuario, id)); }
-    @PatchMapping("/{id}/contenido") public void subirFragmento(@RequestParam String nombreUsuario, @PathVariable Long id, @RequestParam long offset, InputStream input) { cargaService.subirFragmento(nombreUsuario, id, offset, input); }
-    @PostMapping("/{id}/finalizar") public void finalizar(@RequestParam String nombreUsuario, @PathVariable Long id) { cargaService.finalizar(nombreUsuario, id); }
-    private static CargaResponse response(Carga c) { return new CargaResponse(c.getIdCarga(), c.getOffsetConfirmado(), c.getEstado()); }
+    private final AutenticacionUtil autenticacionUtil;
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) public CargaResponse iniciar(@Valid @RequestBody IniciarCargaRequest request) { Carga carga = cargaService.iniciar(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaDestinoId(), request.nombreArchivo(), request.tamanoEsperado()); return new CargaResponse(carga.getIdCarga(), carga.getOffsetConfirmado(), carga.getEstado()); }
+    @GetMapping("/{id}") public CargaResponse consultar(@PathVariable Long id) { Carga carga = cargaService.consultar(autenticacionUtil.nombreUsuarioAutenticado(), id); return new CargaResponse(carga.getIdCarga(), carga.getOffsetConfirmado(), carga.getEstado()); }
+    @PutMapping("/{id}/fragmento") public void subirFragmento(@PathVariable Long id, @RequestParam long offset, @RequestParam("file") MultipartFile file) throws IOException { cargaService.subirFragmento(autenticacionUtil.nombreUsuarioAutenticado(), id, offset, file.getInputStream()); }
+    @PostMapping("/{id}/finalizar") public Archivo finalizar(@PathVariable Long id) { return cargaService.finalizar(autenticacionUtil.nombreUsuarioAutenticado(), id); }
 }
