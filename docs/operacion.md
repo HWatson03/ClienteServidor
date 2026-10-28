@@ -42,3 +42,18 @@ Evaluar según red:
 
 ## Logs
 Rotación configurable con logback.
+
+## Bootstrap del primer usuario
+
+Para crear el primer usuario en una base vacía, define las variables de entorno antes de arrancar:
+```
+APP_BOOTSTRAP_USUARIO=admin
+APP_BOOTSTRAP_CONTRASENA=claveSegura123
+```
+O en application.properties:
+```
+app.bootstrap.usuario=admin
+app.bootstrap.contrasena=claveSegura123
+```
+Solo se crea si no existen usuarios. Después del primer arranque, quita estas variables.
+Alternativamente, inserta el usuario directamente en la base de datos.

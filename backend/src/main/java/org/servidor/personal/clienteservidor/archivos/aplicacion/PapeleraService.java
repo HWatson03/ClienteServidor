@@ -73,14 +73,20 @@ public class PapeleraService {
         if ("archivo".equals(tipo)) {
             Archivo archivo = archivoRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
             if (!archivo.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            if (!archivo.isEnPapelera()) throw new IllegalArgumentException("El archivo no está en la papelera");
+            boolean eliminado = almacenamientoService.eliminarPorClave(archivo.getClaveDisco());
+            if (!eliminado) {
+                log.warn("No se pudo eliminar archivo del disco: {}", archivo.getClaveDisco());
+            }
             CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
             cuota.setBytesOcupados(Math.max(0, cuota.getBytesOcupados() - archivo.getTamano()));
             cuotaUsuarioRepository.save(cuota);
-            almacenamientoService.eliminarPorClave(archivo.getClaveDisco());
             archivoRepository.delete(archivo);
         } else if ("carpeta".equals(tipo)) {
             Carpeta carpeta = carpetaRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Carpeta no encontrada"));
             if (!carpeta.getPropietario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
+            if (!carpeta.isEnPapelera()) throw new IllegalArgumentException("La carpeta no está en la papelera");
+            if (Boolean.TRUE.equals(carpeta.isEsRaiz())) throw new IllegalArgumentException("No se puede eliminar la carpeta raíz");
             // Recursively delete all files and subfolders
             long bytesLiberados = eliminarCarpetaRecursiva(carpeta, usuario);
             CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
