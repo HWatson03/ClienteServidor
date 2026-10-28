@@ -8,6 +8,7 @@ import org.servidor.personal.clienteservidor.archivos.presentacion.dto.CarpetaRe
 import org.servidor.personal.clienteservidor.archivos.presentacion.dto.CrearCarpetaRequest;
 import org.servidor.personal.clienteservidor.archivos.presentacion.dto.RenombrarRequest;
 import org.servidor.personal.clienteservidor.infraestructura.AutenticacionUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,8 @@ import java.util.List;
 public class CarpetaApi {
     private final CarpetaService carpetaService;
     private final AutenticacionUtil autenticacionUtil;
+    @GetMapping("/raiz") public CarpetaResponse raiz() { Carpeta c = carpetaService.obtenerRaiz(autenticacionUtil.nombreUsuarioAutenticado()); return new CarpetaResponse(c.getIdCarpeta(), c.getNombre(), null); }
     @GetMapping public List<CarpetaResponse> listar(@RequestParam(required = false) Long padreId) { List<Carpeta> carpetas = carpetaService.listarCarpetas(autenticacionUtil.nombreUsuarioAutenticado(), padreId); return carpetas.stream().map(c -> new CarpetaResponse(c.getIdCarpeta(), c.getNombre(), c.getPadre() != null ? c.getPadre().getIdCarpeta() : null)).toList(); }
-    @PostMapping public void crear(@Valid @RequestBody CrearCarpetaRequest request) { carpetaService.crearCarpeta(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaPadreId(), request.nombre()); }
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) public CarpetaResponse crear(@Valid @RequestBody CrearCarpetaRequest request) { Carpeta c = carpetaService.crearCarpeta(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaPadreId(), request.nombre()); return new CarpetaResponse(c.getIdCarpeta(), c.getNombre(), c.getPadre() != null ? c.getPadre().getIdCarpeta() : null); }
     @PatchMapping("/{id}") public void renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { carpetaService.renombrarCarpeta(autenticacionUtil.nombreUsuarioAutenticado(), id, request.nombre()); }
 }

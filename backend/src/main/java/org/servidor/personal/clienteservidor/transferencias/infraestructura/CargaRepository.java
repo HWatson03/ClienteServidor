@@ -9,6 +9,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CargaRepository extends JpaRepository<Carga, Long> {
-    @Query("SELECT c FROM Carga c WHERE c.estado NOT IN ('FINALIZADA', 'EXPIRADA') AND c.expiraEn < :ahora")
+    @Query("SELECT c FROM Carga c WHERE c.estado NOT IN ('FINALIZADA', 'DUPLICADA', 'EXPIRADA') AND c.expiraEn < :ahora")
     List<Carga> findExpiradas(@Param("ahora") LocalDateTime ahora);
 }

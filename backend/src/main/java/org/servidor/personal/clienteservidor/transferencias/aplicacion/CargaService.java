@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,6 +32,20 @@ public class CargaService {
     private final ArchivoRepository archivoRepository;
     private final CuotaUsuarioRepository cuotaUsuarioRepository;
     private final AlmacenamientoService almacenamientoService;
+
+    @Transactional(readOnly = true)
+    public long validarEspacio(String nombreUsuario, Long carpetaDestinoId, long tamanoEsperado) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        obtenerCarpetaPropia(usuario, carpetaDestinoId);
+        if (tamanoEsperado < 0) throw new IllegalArgumentException("Tamaño inválido");
+        CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario)
+                .orElseThrow(() -> new IllegalStateException("Cuota no encontrada"));
+        long disponible = usuario.getCuotaMaxBytes() - cuota.getBytesOcupados() - cuota.getBytesReservados();
+        if (tamanoEsperado > disponible) {
+            throw new IllegalArgumentException("El archivo supera el espacio disponible");
+        }
+        return disponible;
+    }
 
     @Transactional
     public Carga iniciar(String nombreUsuario, Long carpetaDestinoId, String nombreArchivo, long tamanoEsperado) {
@@ -70,11 +85,11 @@ public class CargaService {
     }
 
     @Transactional
-    public void subirFragmento(String nombreUsuario, Long cargaId, long offset, InputStream input) {
+    public Carga subirFragmento(String nombreUsuario, Long cargaId, long offset, InputStream input) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
-        if ("FINALIZADA".equals(carga.getEstado())) return;
+        if ("FINALIZADA".equals(carga.getEstado()) || "DUPLICADA".equals(carga.getEstado())) return carga;
         if ("EXPIRADA".equals(carga.getEstado())) throw new IllegalStateException("Carga expirada");
         if (offset != carga.getOffsetConfirmado()) throw new IllegalArgumentException("Offset incompatible");
         if (offset > carga.getTamanoEsperado()) throw new IllegalArgumentException("Offset inválido");
@@ -83,7 +98,7 @@ public class CargaService {
             long tamanoActual = Files.exists(almacenamientoService.obtenerTemporal(carga.getClaveTemporal())) 
                     ? Files.size(almacenamientoService.obtenerTemporal(carga.getClaveTemporal())) : 0;
             carga.setOffsetConfirmado(tamanoActual);
-            cargaRepository.save(carga);
+            return cargaRepository.save(carga);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -92,25 +107,44 @@ public class CargaService {
     }
 
     @Transactional
-    public Archivo finalizar(String nombreUsuario, Long cargaId) {
+    public ResultadoFinalizacionCarga finalizar(String nombreUsuario, Long cargaId) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Carga carga = cargaRepository.findById(cargaId).orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
         if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) throw new SecurityException("Recurso no accesible");
         if ("EXPIRADA".equals(carga.getEstado())) throw new IllegalStateException("Carga expirada");
-        if ("FINALIZADA".equals(carga.getEstado())) {
-            return archivoRepository.findByPropietarioAndNombreVisibleAndTamano(usuario, carga.getNombreArchivo(), carga.getTamanoEsperado())
-                    .orElseThrow(() -> new IllegalArgumentException("Archivo no encontrado"));
+        if ("FINALIZADA".equals(carga.getEstado()) || "DUPLICADA".equals(carga.getEstado())) {
+            Archivo existente = archivoRepository.findByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndTamanoAndEnPapeleraFalse(
+                            usuario, carga.getCarpetaDestino(), carga.getNombreArchivo(), carga.getTamanoEsperado())
+                    .orElseThrow(() -> new IllegalArgumentException("Archivo finalizado no encontrado"));
+            return new ResultadoFinalizacionCarga(existente, "DUPLICADA".equals(carga.getEstado()));
         }
-        if (carga.getOffsetConfirmado() != carga.getTamanoEsperado()) {
-            throw new IllegalArgumentException("Carga incompleta");
+        if (carga.getOffsetConfirmado().longValue() != carga.getTamanoEsperado().longValue()) {
+            throw new IllegalArgumentException("Carga incompleta: el servidor recibió "
+                    + carga.getOffsetConfirmado() + " de " + carga.getTamanoEsperado() + " bytes");
         }
         try {
+            var temporal = almacenamientoService.obtenerTemporal(carga.getClaveTemporal());
+            List<Archivo> mismoNombre = archivoRepository
+                    .findByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(
+                            usuario, carga.getCarpetaDestino(), carga.getNombreArchivo());
+            for (Archivo candidato : mismoNombre) {
+                if (candidato.getTamano().longValue() == carga.getTamanoEsperado().longValue()
+                        && Files.mismatch(temporal, almacenamientoService.obtenerArchivoFinal(candidato.getClaveDisco())) == -1) {
+                    carga.setEstado("DUPLICADA");
+                    cargaRepository.save(carga);
+                    liberarReserva(usuario, carga.getTamanoEsperado());
+                    almacenamientoService.eliminar(temporal);
+                    return new ResultadoFinalizacionCarga(candidato, true);
+                }
+            }
+
+            String nombreFinal = resolverNombreUnico(usuario, carga.getCarpetaDestino(), carga.getNombreArchivo());
             String claveFinal = UUID.randomUUID().toString();
             almacenamientoService.moverAFinal(carga.getClaveTemporal(), claveFinal);
             Archivo archivo = new Archivo();
             archivo.setPropietario(usuario);
             archivo.setCarpeta(carga.getCarpetaDestino());
-            archivo.setNombreVisible(carga.getNombreArchivo());
+            archivo.setNombreVisible(nombreFinal);
             archivo.setClaveDisco(claveFinal);
             archivo.setTamano(carga.getTamanoEsperado());
             archivo.setEnPapelera(false);
@@ -120,12 +154,50 @@ public class CargaService {
             cuota.setBytesReservados(cuota.getBytesReservados() - carga.getTamanoEsperado());
             cuota.setBytesOcupados(cuota.getBytesOcupados() + carga.getTamanoEsperado());
             cuotaUsuarioRepository.save(cuota);
+            carga.setNombreArchivo(nombreFinal);
             carga.setEstado("FINALIZADA");
             cargaRepository.save(carga);
-            return archivo;
+            return new ResultadoFinalizacionCarga(archivo, false);
         } catch (Exception e) {
             throw new IllegalStateException("Error al finalizar carga", e);
         }
+    }
+
+    private void liberarReserva(Usuario usuario, long tamano) {
+        CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
+        cuota.setBytesReservados(Math.max(0, cuota.getBytesReservados() - tamano));
+        cuotaUsuarioRepository.save(cuota);
+    }
+
+    private String resolverNombreUnico(Usuario usuario, Carpeta carpeta, String nombreBase) {
+        String nombre = nombreBase.trim();
+        if (!archivoRepository.existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(usuario, carpeta, nombre)) {
+            return nombre;
+        }
+        int contador = 1;
+        while (archivoRepository.existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(
+                usuario, carpeta, "(" + contador + ") " + nombre)) {
+            contador++;
+        }
+        return "(" + contador + ") " + nombre;
+    }
+
+    @Transactional
+    public void cancelar(String nombreUsuario, Long cargaId) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        Carga carga = cargaRepository.findById(cargaId)
+                .orElseThrow(() -> new IllegalArgumentException("Carga no encontrada"));
+        if (!carga.getUsuario().getIdUsuario().equals(usuario.getIdUsuario())) {
+            throw new SecurityException("Recurso no accesible");
+        }
+        if ("FINALIZADA".equals(carga.getEstado()) || "DUPLICADA".equals(carga.getEstado())) {
+            throw new IllegalArgumentException("La carga ya finalizó");
+        }
+        CuotaUsuario cuota = cuotaUsuarioRepository.findByUsuario(usuario).orElseThrow();
+        cuota.setBytesReservados(Math.max(0, cuota.getBytesReservados() - carga.getTamanoEsperado()));
+        cuotaUsuarioRepository.save(cuota);
+        almacenamientoService.eliminar(almacenamientoService.obtenerTemporal(carga.getClaveTemporal()));
+        cargaRepository.delete(carga);
     }
 
     private Usuario obtenerUsuario(String nombreUsuario) {

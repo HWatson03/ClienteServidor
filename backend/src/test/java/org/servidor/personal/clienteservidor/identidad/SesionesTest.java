@@ -29,15 +29,16 @@ class SesionesTest {
     private SesionRepository sesionRepository;
 
     @Test
-    void maximoTresSesiones() {
+    void permiteSesionesIlimitadas() {
         authService.registrar("usuario2", "clave123");
         Usuario usuario = usuarioRepository.findByNombreUsuarioIgnoreCase("usuario2").orElseThrow();
-        
+
         authService.login("usuario2", "clave123");
         authService.login("usuario2", "clave123");
         authService.login("usuario2", "clave123");
-        
-        assertEquals(3, sesionRepository.countActivas(usuario, LocalDateTime.now()));
-        assertThrows(IllegalArgumentException.class, () -> authService.login("usuario2", "clave123"));
+        authService.login("usuario2", "clave123");
+        authService.login("usuario2", "clave123");
+
+        assertEquals(5, sesionRepository.countActivas(usuario, LocalDateTime.now()));
     }
 }

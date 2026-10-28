@@ -42,6 +42,16 @@ public class ArchivoService {
         archivoRepository.save(archivo);
     }
 
+    @Transactional(readOnly = true)
+    public Archivo obtenerParaDescarga(String nombreUsuario, Long archivoId) {
+        Usuario usuario = obtenerUsuario(nombreUsuario);
+        Archivo archivo = obtenerArchivoPropio(usuario, archivoId);
+        if (archivo.isEnPapelera()) {
+            throw new IllegalArgumentException("El archivo está en la papelera");
+        }
+        return archivo;
+    }
+
     private String resolverNombreUnico(Usuario usuario, Carpeta carpeta, String nombreBase) {
         String nombre = nombreBase.trim();
         if (!archivoRepository.existsByPropietarioAndCarpetaAndNombreVisibleIgnoreCaseAndEnPapeleraFalse(usuario, carpeta, nombre)) {

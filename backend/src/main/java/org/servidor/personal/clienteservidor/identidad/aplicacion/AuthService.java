@@ -73,23 +73,16 @@ public class AuthService {
         if (!passwordEncoder.matches(contrasena, usuario.getContrasenaHash())) {
             throw new IllegalArgumentException("Credenciales inválidas");
         }
-        LocalDateTime ahora = LocalDateTime.now();
-        synchronized (("login:" + usuario.getIdUsuario()).intern()) {
-            long activas = sesionRepository.countActivas(usuario, ahora);
-            if (activas >= 3) {
-                throw new IllegalArgumentException("Máximo de 3 sesiones activas alcanzado");
-            }
-            String token = generarToken();
-            String tokenHash = hash(token);
-            Sesion sesion = new Sesion();
-            sesion.setUsuario(usuario);
-            sesion.setTokenHash(tokenHash);
-            sesion.setExpiraEn(ahora.plusDays(7));
-            sesion.setRevocada(false);
-            sesion.setEstado("ACTIVO");
-            sesionRepository.save(sesion);
-            return token;
-        }
+        String token = generarToken();
+        String tokenHash = hash(token);
+        Sesion sesion = new Sesion();
+        sesion.setUsuario(usuario);
+        sesion.setTokenHash(tokenHash);
+        sesion.setExpiraEn(LocalDateTime.now().plusDays(7));
+        sesion.setRevocada(false);
+        sesion.setEstado("ACTIVO");
+        sesionRepository.save(sesion);
+        return token;
     }
 
     @Transactional

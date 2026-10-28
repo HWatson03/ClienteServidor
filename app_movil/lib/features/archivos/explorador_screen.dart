@@ -1,7 +1,11 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
 import 'package:admin/core/api_client.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:admin/features/transferencias/cargas_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class ExploradorScreen extends StatefulWidget {
   const ExploradorScreen({super.key});
@@ -12,9 +16,18 @@ class ExploradorScreen extends StatefulWidget {
 
 class _ExploradorScreenState extends State<ExploradorScreen> {
   final _apiClient = ApiClient();
-  List<dynamic> carpetas = [];
-  List<dynamic> archivos = [];
-  bool _cargando = false;
+  final List<_CarpetaRuta> _ruta = [];
+  List<dynamic> _carpetas = [];
+  List<dynamic> _archivos = [];
+  bool _cargando = true;
+  String? _error;
+  int? _descargandoId;
+  int? _previsualizandoId;
+  int? _raizId;
+
+  int? get _carpetaActualId => _ruta.isEmpty ? _raizId : _ruta.last.id;
+  String get _nombreCarpetaActual =>
+      _ruta.isEmpty ? 'Mis archivos' : _ruta.last.nombre;
 
   @override
   void initState() {
@@ -22,47 +35,512 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
     _cargar();
   }
 
-  Future<void> _cargar({String? nombre}) async {
-    setState(() => _cargando = true);
+  Future<void> _cargar() async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final usuario = prefs.getString('nombreUsuario') ?? '';
-      final url = nombre != null && nombre.isNotEmpty
-          ? '/api/archivos?nombreUsuario=$usuario&nombre=$nombre'
-          : '/api/archivos?nombreUsuario=$usuario';
-      final respCarpetas = await _apiClient.get('/api/carpetas?nombreUsuario=$usuario');
-      final respArchivos = await _apiClient.get(url);
-      if (respCarpetas.statusCode == 200) {
-        carpetas = jsonDecode(respCarpetas.body);
+      final carpetaId = _carpetaActualId;
+      if (carpetaId == null) {
+        final rootResponse = await _apiClient.get('/api/carpetas/raiz');
+        if (rootResponse.statusCode != 200)
+          throw Exception('No se encontró la carpeta raíz');
+        _raizId = (jsonDecode(rootResponse.body)
+            as Map<String, dynamic>)['idCarpeta'] as int;
       }
-      if (respArchivos.statusCode == 200) {
-        final data = jsonDecode(respArchivos.body);
-        archivos = data['content'] ?? data;
+      final id = _carpetaActualId!;
+      final responses = await Future.wait([
+        _apiClient.get('/api/carpetas?padreId=$id'),
+        _apiClient.get('/api/archivos?carpetaId=$id'),
+      ]);
+      if (responses[0].statusCode != 200 || responses[1].statusCode != 200) {
+        throw Exception(
+            'El servidor respondió ${responses[0].statusCode}/${responses[1].statusCode}');
       }
+      final carpetas = jsonDecode(responses[0].body) as List<dynamic>;
+      final archivosData = jsonDecode(responses[1].body);
+      if (!mounted) return;
+      setState(() {
+        _carpetas = carpetas;
+        _archivos = archivosData is Map
+            ? (archivosData['content'] as List<dynamic>? ?? [])
+            : (archivosData as List<dynamic>);
+      });
+    } catch (_) {
+      if (mounted)
+        setState(() => _error =
+            'No pudimos cargar tus archivos. Revisa la conexión con el servidor e inténtalo otra vez.');
     } finally {
-      setState(() => _cargando = false);
+      if (mounted) setState(() => _cargando = false);
     }
+  }
+
+  void _abrirCarpeta(Map<String, dynamic> carpeta) {
+    setState(() => _ruta.add(_CarpetaRuta(carpeta['idCarpeta'] as int,
+        carpeta['nombre'] as String? ?? 'Carpeta')));
+    _cargar();
+  }
+
+  void _volverCarpeta() {
+    if (_ruta.isEmpty) return;
+    setState(() => _ruta.removeLast());
+    _cargar();
+  }
+
+  Future<void> _crearCarpeta() async {
+    final controller = TextEditingController();
+    final nombre = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nueva carpeta'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Nombre de la carpeta'),
+          onSubmitted: (value) => Navigator.pop(context, value.trim()),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('Crear')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (nombre == null || nombre.isEmpty) return;
+    final response = await _apiClient.post('/api/carpetas', {
+      'carpetaPadreId': _carpetaActualId,
+      'nombre': nombre,
+    });
+    if (!mounted) return;
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final carpeta = jsonDecode(response.body) as Map<String, dynamic>;
+      setState(() {
+        _ruta.add(_CarpetaRuta(
+          (carpeta['idCarpeta'] as num).toInt(),
+          carpeta['nombre'] as String? ?? nombre,
+        ));
+      });
+      await _cargar();
+    } else {
+      _mensaje('No se pudo crear la carpeta.');
+    }
+  }
+
+  Future<void> _subirArchivo() async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => CargasScreen(
+          carpetaDestinoId: _carpetaActualId,
+          nombreCarpetaDestino: _nombreCarpetaActual,
+        ),
+      ),
+    );
+    if (mounted) await _cargar();
+  }
+
+  Future<void> _descargarArchivo(Map<String, dynamic> archivo) async {
+    final id = archivo['idArchivo'] as int?;
+    final nombre = archivo['nombreVisible'] as String? ?? 'archivo';
+    if (id == null) return;
+    setState(() => _descargandoId = id);
+    try {
+      final token = await _apiClient.getToken();
+      final response = await http.get(
+        Uri.parse('${ApiClient.baseUrl}/api/archivos/$id/descargar'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200)
+        throw Exception('HTTP ${response.statusCode}');
+      final guardado = await FilePicker.platform.saveFile(
+        dialogTitle: 'Guardar archivo en el teléfono',
+        fileName: nombre,
+        bytes: response.bodyBytes,
+      );
+      if (!mounted) return;
+      _mensaje(guardado == null
+          ? 'Descarga cancelada.'
+          : 'Archivo guardado en el teléfono.');
+    } catch (_) {
+      if (mounted)
+        _mensaje(
+            'No se pudo descargar el archivo. Comprueba la conexión e inténtalo otra vez.');
+    } finally {
+      if (mounted) setState(() => _descargandoId = null);
+    }
+  }
+
+  Future<void> _previsualizarImagen(Map<String, dynamic> archivo) async {
+    final id = archivo['idArchivo'] as int?;
+    final nombre = archivo['nombreVisible'] as String? ?? 'Imagen';
+    if (id == null) return;
+    setState(() => _previsualizandoId = id);
+    try {
+      final token = await _apiClient.getToken();
+      final response = await http.get(
+        Uri.parse('${ApiClient.baseUrl}/api/archivos/$id/descargar'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+      if (!mounted) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              _VistaImagen(nombre: nombre, bytes: response.bodyBytes),
+        ),
+      );
+    } catch (_) {
+      if (mounted) _mensaje('No se pudo abrir la vista previa de esta imagen.');
+    } finally {
+      if (mounted) setState(() => _previsualizandoId = null);
+    }
+  }
+
+  void _mensaje(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  String _formatearTamano(dynamic valor) {
+    final bytes = (valor as num?)?.toDouble() ?? 0;
+    if (bytes < 1024) return '${bytes.toInt()} B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   @override
   Widget build(BuildContext context) {
+    final itemsCount = _carpetas.length + _archivos.length;
     return Scaffold(
-      appBar: AppBar(title: Text('Explorador')),
-      body: _cargando
-          ? Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                ...carpetas.map((c) => ListTile(
-                      leading: Icon(Icons.folder),
-                      title: Text(c['nombre'] ?? ''),
-                    )),
-                ...archivos.map((a) => ListTile(
-                      leading: Icon(Icons.insert_drive_file),
-                      title: Text(a['nombreVisible'] ?? ''),
-                      subtitle: Text('${a['tamano'] ?? 0} bytes'),
-                    )),
-              ],
-            ),
+      appBar: AppBar(
+        leading: _ruta.isEmpty
+            ? null
+            : IconButton(
+                onPressed: _volverCarpeta,
+                icon: const Icon(Icons.arrow_back_rounded)),
+        title: Text(_nombreCarpetaActual,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        actions: [
+          IconButton(
+              tooltip: 'Actualizar',
+              onPressed: _cargar,
+              icon: const Icon(Icons.refresh_rounded)),
+          IconButton(
+              tooltip: 'Crear carpeta',
+              onPressed: _crearCarpeta,
+              icon: const Icon(Icons.create_new_folder_outlined)),
+          const SizedBox(width: 4),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _subirArchivo,
+        icon: const Icon(Icons.upload_rounded),
+        label: const Text('Subir archivo'),
+      ),
+      body: RefreshIndicator(
+        onRefresh: _cargar,
+        child: _cargando
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? ListView(children: [
+                    const SizedBox(height: 120),
+                    Icon(Icons.cloud_off_rounded,
+                        size: 48, color: Colors.blueGrey.shade300),
+                    const SizedBox(height: 16),
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(_error!, textAlign: TextAlign.center)),
+                    Center(
+                        child: TextButton.icon(
+                            onPressed: _cargar,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar')))
+                  ])
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 100),
+                    children: [
+                      _ResumenArchivos(
+                          cantidad: itemsCount, carpeta: _nombreCarpetaActual),
+                      const SizedBox(height: 20),
+                      if (itemsCount == 0)
+                        _Vacio(
+                            onUpload: _subirArchivo,
+                            onCreateFolder: _crearCarpeta)
+                      else ...[
+                        if (_carpetas.isNotEmpty) ...[
+                          const _SectionTitle(title: 'Carpetas'),
+                          const SizedBox(height: 8),
+                          ..._carpetas.map((raw) {
+                            final carpeta =
+                                Map<String, dynamic>.from(raw as Map);
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                onTap: () => _abrirCarpeta(carpeta),
+                                leading: _IconoArchivo(
+                                    icon: Icons.folder_rounded,
+                                    color: const Color(0xFFF1A840),
+                                    fondo: const Color(0xFFFFF4DF)),
+                                title: Text(carpeta['nombre'] ?? 'Carpeta',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w500)),
+                                subtitle: const Text('Abrir carpeta'),
+                                trailing:
+                                    const Icon(Icons.chevron_right_rounded),
+                              ),
+                            );
+                          }),
+                        ],
+                        if (_archivos.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          const _SectionTitle(title: 'Archivos'),
+                          const SizedBox(height: 8),
+                          ..._archivos.map((raw) {
+                            final archivo =
+                                Map<String, dynamic>.from(raw as Map);
+                            final id = archivo['idArchivo'] as int?;
+                            final cargandoDescarga =
+                                id != null && _descargandoId == id;
+                            final esImagen = _esImagen(
+                              archivo['nombreVisible'] as String? ?? '',
+                              archivo['tipoMime'] as String?,
+                            );
+                            final previsualizando =
+                                id != null && _previsualizandoId == id;
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: _IconoArchivo(
+                                    icon: _iconoMime(
+                                      archivo['tipoMime'] as String?,
+                                      archivo['nombreVisible'] as String?,
+                                    ),
+                                    color: const Color(0xFF5B5CE2),
+                                    fondo: const Color(0xFFEDEEFF)),
+                                title: Text(
+                                    archivo['nombreVisible'] ?? 'Archivo',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w500)),
+                                onTap: esImagen
+                                    ? () => _previsualizarImagen(archivo)
+                                    : null,
+                                subtitle: Text(
+                                  '${_formatearTamano(archivo['tamano'])}${esImagen ? ' · Toca para previsualizar' : ''}',
+                                ),
+                                trailing: IconButton(
+                                  tooltip: 'Descargar al teléfono',
+                                  onPressed: cargandoDescarga
+                                      ? null
+                                      : () => _descargarArchivo(archivo),
+                                  icon: cargandoDescarga || previsualizando
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2))
+                                      : const Icon(Icons.download_rounded,
+                                          color: Color(0xFF5B5CE2)),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    ],
+                  ),
+      ),
     );
   }
+
+  bool _esImagen(String nombre, String? mime) {
+    if (mime?.startsWith('image/') == true) return true;
+    final extension = nombre.split('.').last.toLowerCase();
+    return const {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif'}
+        .contains(extension);
+  }
+
+  IconData _iconoMime(String? mime, String? nombre) {
+    if (_esImagen(nombre ?? '', mime)) return Icons.image_rounded;
+    if (mime?.startsWith('video/') == true) return Icons.movie_rounded;
+    if (mime?.startsWith('audio/') == true) return Icons.music_note_rounded;
+    if (mime?.contains('pdf') == true) return Icons.picture_as_pdf_rounded;
+    return Icons.insert_drive_file_rounded;
+  }
+}
+
+class _VistaImagen extends StatelessWidget {
+  const _VistaImagen({required this.nombre, required this.bytes});
+
+  final String nombre;
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: const Color(0xFF11121A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF11121A),
+          foregroundColor: Colors.white,
+          title: Text(nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.7,
+            maxScale: 5,
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No se pudo decodificar esta imagen.',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _CarpetaRuta {
+  const _CarpetaRuta(this.id, this.nombre);
+  final int id;
+  final String nombre;
+}
+
+class _ResumenArchivos extends StatelessWidget {
+  const _ResumenArchivos({required this.cantidad, required this.carpeta});
+  final int cantidad;
+  final String carpeta;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+              colors: [Color(0xFF6667E8), Color(0xFF8889F5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tu espacio personal',
+                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    SizedBox(height: 8),
+                    Text('Tus archivos\nen un solo lugar',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2)),
+                    SizedBox(height: 8),
+                    Text('$cantidad elementos · $carpeta',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ]),
+            ),
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .18),
+                  borderRadius: BorderRadius.circular(20)),
+              child: const Icon(Icons.cloud_done_rounded,
+                  color: Colors.white, size: 32),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+  final String title;
+  @override
+  Widget build(BuildContext context) => Text(title,
+      style: Theme.of(context)
+          .textTheme
+          .titleMedium
+          ?.copyWith(fontWeight: FontWeight.w600));
+}
+
+class _IconoArchivo extends StatelessWidget {
+  const _IconoArchivo(
+      {required this.icon, required this.color, required this.fondo});
+  final IconData icon;
+  final Color color;
+  final Color fondo;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+            color: fondo, borderRadius: BorderRadius.circular(14)),
+        child: Icon(icon, color: color),
+      );
+}
+
+class _Vacio extends StatelessWidget {
+  const _Vacio({required this.onUpload, required this.onCreateFolder});
+  final VoidCallback onUpload;
+  final VoidCallback onCreateFolder;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+            color: Colors.white, borderRadius: BorderRadius.circular(24)),
+        child: Column(
+          children: [
+            Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                    color: Color(0xFFEDEEFF), shape: BoxShape.circle),
+                child: const Icon(Icons.folder_open_rounded,
+                    color: Color(0xFF5B5CE2), size: 35)),
+            const SizedBox(height: 16),
+            Text('Aquí todavía no hay archivos',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(
+                'Sube algo desde tu teléfono o crea una carpeta para organizarte.',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(color: Colors.blueGrey.shade500, height: 1.45)),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+                onPressed: onUpload,
+                icon: const Icon(Icons.upload_rounded),
+                label: const Text('Elegir archivo')),
+            TextButton.icon(
+                onPressed: onCreateFolder,
+                icon: const Icon(Icons.create_new_folder_outlined),
+                label: const Text('Crear carpeta')),
+          ],
+        ),
+      );
 }

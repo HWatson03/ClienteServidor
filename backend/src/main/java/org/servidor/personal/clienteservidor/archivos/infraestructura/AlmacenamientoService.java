@@ -64,6 +64,15 @@ public class AlmacenamientoService {
         return temp().resolve(clave);
     }
 
+    public Path obtenerArchivoFinal(String clave) {
+        Path base = root().toAbsolutePath().normalize();
+        Path archivo = base.resolve(clave).normalize();
+        if (!archivo.startsWith(base)) {
+            throw new IllegalArgumentException("Clave de archivo inválida");
+        }
+        return archivo;
+    }
+
     public void moverAFinal(String claveTemporal, String claveFinal) throws IOException {
         Path origen = temp().resolve(claveTemporal);
         Path destino = root().resolve(claveFinal);
