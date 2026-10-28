@@ -41,10 +41,14 @@ public class AlmacenamientoService {
         if (tamanoActual != offset) {
             throw new IllegalArgumentException("Offset incompatible");
         }
-        // Read input with limit
-        byte[] data = input.readAllBytes();
+        // Read input with limit to avoid memory exhaustion
+        int maxFragmentSize = 1024 * 1024; // 1MB max per fragment
+        byte[] data = input.readNBytes(maxFragmentSize + 1);
         if (data.length == 0) {
             return archivo;
+        }
+        if (data.length > maxFragmentSize) {
+            throw new IllegalArgumentException("Fragmento demasiado grande");
         }
         long nuevo = offset + data.length;
         if (nuevo > tamanoEsperado) {

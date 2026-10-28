@@ -19,6 +19,7 @@ class _CargasScreenState extends State<CargasScreen> {
   int _fragmentoActual = 0;
   int _totalFragmentos = 0;
   static const int _tamanoFragmento = 512 * 1024; // 512KB
+  int _carpetaDestinoId = 1;
 
   Future<void> _seleccionarYSubir() async {
     final result = await FilePicker.platform.pickFiles(withReadStream: true);
@@ -33,7 +34,7 @@ class _CargasScreenState extends State<CargasScreen> {
       
       // Iniciar carga
       final resp = await _apiClient.post('/api/cargas', {
-        'carpetaDestinoId': 1,
+        'carpetaDestinoId': _carpetaDestinoId,
         'nombreArchivo': file.name,
         'tamanoEsperado': file.size,
       });
@@ -50,24 +51,31 @@ class _CargasScreenState extends State<CargasScreen> {
       }
       final cargaId = match.group(1)!;
       
-      // Leer archivo en stream para evitar memoria
-      final filePath = file.path;
-      if (filePath == null) {
+      // Usar bytes o stream según disponibilidad
+      final fileSize = file.size;
+      _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
+      if (_totalFragmentos == 0) _totalFragmentos = 1;
+      
+      List<int> bytes;
+      if (file.bytes != null) {
+        bytes = file.bytes!;
+      } else if (file.path != null) {
+        bytes = await File(file.path!).readAsBytes();
+      } else if (file.readStream != null) {
+        final chunks = <int>[];
+        await for (final chunk in file.readStream!) {
+          chunks.addAll(chunk);
+        }
+        bytes = chunks;
+      } else {
         setState(() { _estado = 'No se pudo leer archivo'; _subiendo = false; });
         return;
       }
       
-      final fileObj = File(filePath);
-      final fileSize = await fileObj.length();
-      _totalFragmentos = (fileSize / _tamanoFragmento).ceil();
-      if (_totalFragmentos == 0) _totalFragmentos = 1;
-      
-      final raf = await fileObj.open();
       int offset = 0;
-      while (offset < fileSize) {
-        final fin = (offset + _tamanoFragmento).clamp(0, fileSize);
-        final length = fin - offset;
-        final fragmento = await raf.read(length);
+      while (offset < bytes.length) {
+        final fin = (offset + _tamanoFragmento).clamp(0, bytes.length);
+        final fragmento = bytes.sublist(offset, fin);
         
         _fragmentoActual++;
         setState(() { _estado = 'Fragmento $_fragmentoActual/$_totalFragmentos'; });
@@ -81,13 +89,11 @@ class _CargasScreenState extends State<CargasScreen> {
         
         if (streamed.statusCode != 200) {
           setState(() { _estado = 'Error en fragmento: ${streamed.statusCode}'; _subiendo = false; });
-          await raf.close();
           return;
         }
         
         offset = fin;
       }
-      await raf.close();
       
       setState(() { _estado = 'Finalizando...'; });
       final fin = await http.post(
