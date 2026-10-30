@@ -49,6 +49,6 @@ public class PapeleraApi {
     }
 
     @DeleteMapping("/archivos/{id}") public void enviarAPapelera(@PathVariable Long id) { papeleraService.enviarArchivoAPapelera(autenticacionUtil.nombreUsuarioAutenticado(), id); }
-    @PostMapping("/{tipo}/{id}/restaurar") public void restaurar(@PathVariable String tipo, @PathVariable Long id) { papeleraService.restaurar(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id); }
+    @PostMapping("/{tipo}/{id}/restaurar") public Map<String, String> restaurar(@PathVariable String tipo, @PathVariable Long id) { return Map.of("nombre", papeleraService.restaurar(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id)); }
     @DeleteMapping("/{tipo}/{id}") public void eliminarDefinitivamente(@PathVariable String tipo, @PathVariable Long id) { papeleraService.eliminarDefinitivamente(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id); }
 }

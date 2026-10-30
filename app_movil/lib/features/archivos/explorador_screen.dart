@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:admin/core/api_client.dart';
 import 'package:admin/features/transferencias/cargas_screen.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ExploradorScreen extends StatefulWidget {
   const ExploradorScreen({super.key});
@@ -22,8 +26,11 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
   bool _cargando = true;
   String? _error;
   int? _descargandoId;
+  int? _eliminandoId;
   int? _previsualizandoId;
   int? _raizId;
+  bool _vistaGrilla = true;
+  final Map<int, Future<Uint8List?>> _miniaturas = {};
 
   int? get _carpetaActualId => _ruta.isEmpty ? _raizId : _ruta.last.id;
   String get _nombreCarpetaActual =>
@@ -132,6 +139,49 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
     }
   }
 
+  Future<void> _enviarAPapelera(Map<String, dynamic> archivo) async {
+    final id = archivo['idArchivo'] as int?;
+    final nombre = archivo['nombreVisible'] as String? ?? 'este archivo';
+    if (id == null) return;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.delete_outline_rounded,
+            color: Color(0xFFD45B65), size: 30),
+        title: const Text('¿Estás seguro de eliminar este archivo?'),
+        content: Text(
+            '“$nombre” se moverá a la papelera. Podrás restaurarlo después.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Sí, eliminar')),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+    setState(() => _eliminandoId = id);
+    try {
+      final response = await http.delete(
+        Uri.parse('${ApiClient.baseUrl}/api/papelera/archivos/$id'),
+        headers: await _apiClient.headers(),
+      );
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+      if (!mounted) return;
+      _mensaje('Archivo movido a la papelera.');
+      await _cargar();
+    } catch (_) {
+      if (mounted) _mensaje('No se pudo mover el archivo a la papelera. Inténtalo de nuevo.');
+    } finally {
+      if (mounted) setState(() => _eliminandoId = null);
+    }
+  }
+
   Future<void> _subirArchivo() async {
     await Navigator.push<bool>(
       context,
@@ -205,6 +255,81 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
     }
   }
 
+  Future<Uint8List?> _cargarMiniatura(int id) {
+    return _miniaturas.putIfAbsent(id, () async {
+      try {
+        final token = await _apiClient.getToken();
+        final response = await http.get(
+          Uri.parse('${ApiClient.baseUrl}/api/archivos/$id/descargar'),
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        );
+        if (response.statusCode != 200) return null;
+        return response.bodyBytes;
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  Future<void> _abrirVideo(Map<String, dynamic> archivo) async {
+    if (kIsWeb) {
+      await _descargarArchivo(archivo);
+      return;
+    }
+    final id = archivo['idArchivo'] as int?;
+    final nombre = archivo['nombreVisible'] as String? ?? 'video';
+    if (id == null) return;
+    setState(() => _descargandoId = id);
+    try {
+      final token = await _apiClient.getToken();
+      final response = await http.get(
+        Uri.parse('${ApiClient.baseUrl}/api/archivos/$id/descargar'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+      final directory = await getTemporaryDirectory();
+      final extension = nombre.contains('.') ? nombre.split('.').last : 'mp4';
+      final safeName = nombre.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+      final file = File('${directory.path}/video_${id}_$safeName');
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+      final result = await OpenFilex.open(file.path, type: 'video/$extension');
+      if (result.type != ResultType.done && mounted) {
+        _mensaje('No se pudo abrir el video con el reproductor del teléfono.');
+      }
+    } catch (_) {
+      if (mounted) _mensaje('No se pudo abrir el video. Comprueba la conexión e inténtalo otra vez.');
+    } finally {
+      if (mounted) setState(() => _descargandoId = null);
+    }
+  }
+
+  bool _esVideo(String nombre, String? mime) {
+    if (mime?.startsWith('video/') == true) return true;
+    return const {'mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', '3gp'}
+        .contains(nombre.split('.').last.toLowerCase());
+  }
+
+  Widget _miniatura(Map<String, dynamic> archivo, {bool grande = false}) {
+    final id = archivo['idArchivo'] as int?;
+    if (id == null) return const Icon(Icons.image_rounded);
+    return FutureBuilder<Uint8List?>(
+      future: _cargarMiniatura(id),
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        if (bytes == null) {
+          return Container(
+            color: const Color(0xFFEDEEFF),
+            alignment: Alignment.center,
+            child: Icon(Icons.image_rounded,
+                size: grande ? 42 : 24, color: const Color(0xFF5B5CE2)),
+          );
+        }
+        return Image.memory(bytes, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_rounded));
+      },
+    );
+  }
+
   void _mensaje(String texto) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
   }
@@ -231,6 +356,12 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
         title: Text(_nombreCarpetaActual,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         actions: [
+          IconButton(
+              tooltip: _vistaGrilla ? 'Vista de lista' : 'Vista de grilla',
+              onPressed: () => setState(() => _vistaGrilla = !_vistaGrilla),
+              icon: Icon(_vistaGrilla
+                  ? Icons.view_list_rounded
+                  : Icons.grid_view_rounded)),
           IconButton(
               tooltip: 'Actualizar',
               onPressed: _cargar,
@@ -304,64 +435,182 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                         ],
                         if (_archivos.isNotEmpty) ...[
                           const SizedBox(height: 10),
-                          const _SectionTitle(title: 'Archivos'),
+                          Row(children: [
+                            const Expanded(child: _SectionTitle(title: 'Archivos')),
+                            Text(_vistaGrilla ? 'Grilla' : 'Lista',
+                                style: TextStyle(color: Colors.blueGrey.shade600)),
+                          ]),
                           const SizedBox(height: 8),
-                          ..._archivos.map((raw) {
-                            final archivo =
-                                Map<String, dynamic>.from(raw as Map);
-                            final id = archivo['idArchivo'] as int?;
-                            final cargandoDescarga =
-                                id != null && _descargandoId == id;
-                            final esImagen = _esImagen(
-                              archivo['nombreVisible'] as String? ?? '',
-                              archivo['tipoMime'] as String?,
-                            );
-                            final previsualizando =
-                                id != null && _previsualizandoId == id;
-                            return Card(
-                              elevation: 0,
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: _IconoArchivo(
-                                    icon: _iconoMime(
-                                      archivo['tipoMime'] as String?,
-                                      archivo['nombreVisible'] as String?,
-                                    ),
-                                    color: const Color(0xFF5B5CE2),
-                                    fondo: const Color(0xFFEDEEFF)),
-                                title: Text(
-                                    archivo['nombreVisible'] ?? 'Archivo',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w500)),
-                                onTap: esImagen
-                                    ? () => _previsualizarImagen(archivo)
-                                    : null,
-                                subtitle: Text(
-                                  '${_formatearTamano(archivo['tamano'])}${esImagen ? ' · Toca para previsualizar' : ''}',
+                          if (_vistaGrilla)
+                            LayoutBuilder(builder: (context, constraints) {
+                              final columnas = constraints.maxWidth >= 700
+                                  ? 4
+                                  : constraints.maxWidth >= 460
+                                      ? 3
+                                      : 2;
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _archivos.length,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columnas,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  childAspectRatio: 0.88,
                                 ),
-                                trailing: IconButton(
-                                  tooltip: 'Descargar al teléfono',
-                                  onPressed: cargandoDescarga
-                                      ? null
-                                      : () => _descargarArchivo(archivo),
-                                  icon: cargandoDescarga || previsualizando
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2))
-                                      : const Icon(Icons.download_rounded,
-                                          color: Color(0xFF5B5CE2)),
-                                ),
-                              ),
-                            );
-                          }),
+                                itemBuilder: (context, index) {
+                                  final archivo = Map<String, dynamic>.from(
+                                      _archivos[index] as Map);
+                                  return _tarjetaArchivo(archivo, grilla: true);
+                                },
+                              );
+                            })
+                          else
+                            ..._archivos.map((raw) => _tarjetaArchivo(
+                                Map<String, dynamic>.from(raw as Map),
+                                grilla: false)),
                         ],
                       ],
                     ],
                   ),
+      ),
+    );
+  }
+
+  Widget _tarjetaArchivo(Map<String, dynamic> archivo,
+      {required bool grilla}) {
+    final id = archivo['idArchivo'] as int?;
+    final nombre = archivo['nombreVisible'] as String? ?? 'Archivo';
+    final mime = archivo['tipoMime'] as String?;
+    final imagen = _esImagen(nombre, mime);
+    final video = _esVideo(nombre, mime);
+    final cargando = id != null && (_descargandoId == id || _eliminandoId == id);
+    final previsualizando = id != null && _previsualizandoId == id;
+    final Future<void> Function()? abrir = imagen
+        ? () => _previsualizarImagen(archivo)
+        : video
+            ? () => _abrirVideo(archivo)
+            : null;
+    if (!grilla) {
+      return Card(
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          onTap: abrir,
+          leading: SizedBox(
+            width: 48,
+            height: 48,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: imagen
+                  ? _miniatura(archivo)
+                  : _IconoArchivo(
+                      icon: _iconoMime(mime, nombre),
+                      color: video ? const Color(0xFFB04CA5) : const Color(0xFF5B5CE2),
+                      fondo: const Color(0xFFEDEEFF)),
+            ),
+          ),
+          title: Text(nombre, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w500)),
+          subtitle: Text('${_formatearTamano(archivo['tamano'])}${imagen ? ' · Toca para previsualizar' : video ? ' · Toca para reproducir' : ''}'),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton(
+              tooltip: video ? 'Abrir video' : 'Descargar al teléfono',
+              onPressed: cargando
+                  ? null
+                  : video
+                      ? abrir
+                      : () => _descargarArchivo(archivo),
+              icon: cargando || previsualizando
+                  ? const SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(video ? Icons.play_arrow_rounded : Icons.download_rounded,
+                      color: const Color(0xFF5B5CE2)),
+            ),
+            IconButton(
+              tooltip: 'Mover a la papelera',
+              onPressed: cargando ? null : () => _enviarAPapelera(archivo),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: Color(0xFFD45B65)),
+            ),
+          ]),
+        ),
+      );
+    }
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: abrir,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(
+            child: Stack(fit: StackFit.expand, children: [
+              if (imagen)
+                _miniatura(archivo, grande: true)
+              else
+                Container(
+                  color: const Color(0xFFEDEEFF),
+                  child: Icon(_iconoMime(mime, nombre), size: 46,
+                      color: video ? const Color(0xFFB04CA5) : const Color(0xFF5B5CE2)),
+                ),
+              if (video)
+                const Center(
+                  child: CircleAvatar(
+                    backgroundColor: Color(0xAA20212A),
+                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                  ),
+                ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: PopupMenuButton<String>(
+                  tooltip: 'Acciones del archivo',
+                  onSelected: (accion) {
+                    if (accion == 'papelera') {
+                      _enviarAPapelera(archivo);
+                    } else if (accion == 'abrir') {
+                      if (abrir != null) abrir();
+                      else _descargarArchivo(archivo);
+                    } else {
+                      _descargarArchivo(archivo);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (imagen || video)
+                      PopupMenuItem(
+                          value: 'abrir',
+                          child: Text(imagen ? 'Previsualizar' : 'Reproducir')),
+                    if (!video)
+                      const PopupMenuItem(
+                          value: 'descargar', child: Text('Descargar')),
+                    const PopupMenuItem(
+                        value: 'papelera', child: Text('Mover a la papelera')),
+                  ],
+                  child: CircleAvatar(
+                    radius: 19,
+                    backgroundColor: Colors.white.withValues(alpha: .92),
+                    child: cargando
+                        ? const SizedBox(width: 18, height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.more_vert_rounded,
+                            color: Color(0xFF303044)),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(nombre, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 3),
+              Text(_formatearTamano(archivo['tamano']),
+                  style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade600)),
+            ]),
+          ),
+        ]),
       ),
     );
   }

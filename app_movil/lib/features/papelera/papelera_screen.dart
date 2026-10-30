@@ -54,19 +54,52 @@ class _PapeleraScreenState extends State<PapeleraScreen> {
       final tipo = carpeta ? 'carpeta' : 'archivo';
       final response =
           await _apiClient.post('/api/papelera/$tipo/$id/restaurar', {});
-      if (response.statusCode != 200 && response.statusCode != 204)
-        throw Exception('HTTP ${response.statusCode}');
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Elemento restaurado.')));
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        final detalle = _detalleError(response.body);
+        if (detalle.toLowerCase().contains('carpeta') &&
+            detalle.toLowerCase().contains('restaura')) {
+          throw Exception(carpeta
+              ? 'Primero restaura la carpeta superior y luego vuelve a intentarlo.'
+              : 'Primero restaura la carpeta que contiene este archivo y luego vuelve a intentarlo.');
+        }
+        throw Exception(detalle);
+      }
+      final datosRestaurados = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      final nombreOriginal =
+          (item['nombreVisible'] ?? item['nombre'] ?? '').toString();
+      final nombreRestaurado = (datosRestaurados['nombre'] ?? nombreOriginal)
+          .toString();
+      final mensaje = nombreRestaurado.isNotEmpty &&
+              nombreRestaurado != nombreOriginal
+          ? 'Restaurado como "$nombreRestaurado" porque ya existía un elemento con ese nombre.'
+          : 'Elemento restaurado.';
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(mensaje)));
+      }
       await _cargar();
-    } catch (_) {
+    } catch (error) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudo restaurar el elemento.')));
+            SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
     } finally {
       if (mounted) setState(() => _restaurandoId = null);
     }
+  }
+
+  String _detalleError(String body) {
+    if (body.isEmpty) return 'No se pudo restaurar el elemento.';
+    try {
+      final data = jsonDecode(body);
+      if (data is Map<String, dynamic>) {
+        return (data['detail'] ?? data['mensaje'] ?? data['message'] ??
+                data['title'] ?? 'No se pudo restaurar el elemento.')
+            .toString();
+      }
+    } catch (_) {}
+    return 'No se pudo restaurar el elemento.';
   }
 
   @override
