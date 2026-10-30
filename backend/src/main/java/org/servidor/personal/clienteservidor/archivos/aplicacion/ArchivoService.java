@@ -34,12 +34,16 @@ public class ArchivoService {
     }
 
     @Transactional
-    public void renombrar(String nombreUsuario, Long archivoId, String nuevoNombre) {
+    public String renombrar(String nombreUsuario, Long archivoId, String nuevoNombre) {
         Usuario usuario = obtenerUsuario(nombreUsuario);
         Archivo archivo = obtenerArchivoPropio(usuario, archivoId);
+        if (archivo.getNombreVisible().equalsIgnoreCase(nuevoNombre.trim())) {
+            return archivo.getNombreVisible();
+        }
         String nombreFinal = resolverNombreUnico(usuario, archivo.getCarpeta(), nuevoNombre);
         archivo.setNombreVisible(nombreFinal);
         archivoRepository.save(archivo);
+        return nombreFinal;
     }
 
     @Transactional(readOnly = true)

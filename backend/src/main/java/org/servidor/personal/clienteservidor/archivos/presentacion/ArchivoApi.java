@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/archivos")
@@ -30,7 +31,7 @@ public class ArchivoApi {
     private final AlmacenamientoService almacenamientoService;
     private final AutenticacionUtil autenticacionUtil;
     @GetMapping public PaginaResponse<ArchivoResponse> listar(@RequestParam(required = false) Long carpetaId, @RequestParam(required = false) String nombre, @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "50") int tamano) { Page<ArchivoResponse> page = archivoService.listar(autenticacionUtil.nombreUsuarioAutenticado(), carpetaId, nombre, pagina, tamano).map(a -> new ArchivoResponse(a.getIdArchivo(), a.getNombreVisible(), a.getTamano(), a.getTipoMime())); return new PaginaResponse<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(), page.isFirst(), page.isLast()); }
-    @PatchMapping("/{id}") public void renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { archivoService.renombrar(autenticacionUtil.nombreUsuarioAutenticado(), id, request.nombre()); }
+    @PatchMapping("/{id}") public Map<String, String> renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { return Map.of("nombre", archivoService.renombrar(autenticacionUtil.nombreUsuarioAutenticado(), id, request.nombre())); }
 
     @GetMapping("/{id}/descargar")
     public ResponseEntity<Resource> descargar(@PathVariable Long id) {

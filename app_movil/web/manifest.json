@@ -1,11 +1,11 @@
 {
-    "name": "admin",
-    "short_name": "admin",
+    "name": "Sherlock",
+    "short_name": "Sherlock",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#101A32",
+    "theme_color": "#101A32",
+    "description": "Tu nube personal para guardar y organizar archivos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

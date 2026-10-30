@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -20,6 +21,7 @@ class ExploradorScreen extends StatefulWidget {
 
 class _ExploradorScreenState extends State<ExploradorScreen> {
   final _apiClient = ApiClient();
+  final _busquedaController = TextEditingController();
   final List<_CarpetaRuta> _ruta = [];
   List<dynamic> _carpetas = [];
   List<dynamic> _archivos = [];
@@ -27,9 +29,13 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
   String? _error;
   int? _descargandoId;
   int? _eliminandoId;
+  int? _renombrandoId;
   int? _previsualizandoId;
   int? _raizId;
   bool _vistaGrilla = true;
+  String _busqueda = '';
+  Timer? _temporizadorBusqueda;
+  int _solicitudActual = 0;
   final Map<int, Future<Uint8List?>> _miniaturas = {};
 
   int? get _carpetaActualId => _ruta.isEmpty ? _raizId : _ruta.last.id;
@@ -42,7 +48,24 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
     _cargar();
   }
 
+  @override
+  void dispose() {
+    _temporizadorBusqueda?.cancel();
+    _busquedaController.dispose();
+    super.dispose();
+  }
+
+  void _cambioBusqueda(String valor) {
+    setState(() => _busqueda = valor);
+    _temporizadorBusqueda?.cancel();
+    _temporizadorBusqueda = Timer(
+      const Duration(milliseconds: 350),
+      _cargar,
+    );
+  }
+
   Future<void> _cargar() async {
+    final solicitud = ++_solicitudActual;
     setState(() {
       _cargando = true;
       _error = null;
@@ -56,18 +79,31 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
         _raizId = (jsonDecode(rootResponse.body)
             as Map<String, dynamic>)['idCarpeta'] as int;
       }
-      final id = _carpetaActualId!;
-      final responses = await Future.wait([
-        _apiClient.get('/api/carpetas?padreId=$id'),
-        _apiClient.get('/api/archivos?carpetaId=$id'),
-      ]);
-      if (responses[0].statusCode != 200 || responses[1].statusCode != 200) {
-        throw Exception(
-            'El servidor respondió ${responses[0].statusCode}/${responses[1].statusCode}');
+      final busqueda = _busqueda.trim();
+      List<dynamic> carpetas = [];
+      dynamic archivosData;
+      if (busqueda.isNotEmpty) {
+        final respuesta = await _apiClient.get(
+            '/api/archivos?nombre=${Uri.encodeQueryComponent(busqueda)}');
+        if (respuesta.statusCode != 200) {
+          throw Exception('El servidor respondió ${respuesta.statusCode}');
+        }
+        archivosData = jsonDecode(respuesta.body);
+      } else {
+        final id = _carpetaActualId!;
+        final responses = await Future.wait([
+          _apiClient.get('/api/carpetas?padreId=$id'),
+          _apiClient.get('/api/archivos?carpetaId=$id'),
+        ]);
+        if (responses[0].statusCode != 200 ||
+            responses[1].statusCode != 200) {
+          throw Exception(
+              'El servidor respondió ${responses[0].statusCode}/${responses[1].statusCode}');
+        }
+        carpetas = jsonDecode(responses[0].body) as List<dynamic>;
+        archivosData = jsonDecode(responses[1].body);
       }
-      final carpetas = jsonDecode(responses[0].body) as List<dynamic>;
-      final archivosData = jsonDecode(responses[1].body);
-      if (!mounted) return;
+      if (!mounted || solicitud != _solicitudActual) return;
       setState(() {
         _carpetas = carpetas;
         _archivos = archivosData is Map
@@ -75,11 +111,13 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
             : (archivosData as List<dynamic>);
       });
     } catch (_) {
-      if (mounted)
+      if (mounted && solicitud == _solicitudActual)
         setState(() => _error =
             'No pudimos cargar tus archivos. Revisa la conexión con el servidor e inténtalo otra vez.');
     } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted && solicitud == _solicitudActual) {
+        setState(() => _cargando = false);
+      }
     }
   }
 
@@ -179,6 +217,91 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
       if (mounted) _mensaje('No se pudo mover el archivo a la papelera. Inténtalo de nuevo.');
     } finally {
       if (mounted) setState(() => _eliminandoId = null);
+    }
+  }
+
+  Future<void> _renombrarArchivo(Map<String, dynamic> archivo) async {
+    final id = archivo['idArchivo'] as int?;
+    final nombreActual = archivo['nombreVisible'] as String? ?? '';
+    if (id == null) return;
+
+    final controller = TextEditingController(text: nombreActual);
+    final formKey = GlobalKey<FormState>();
+    final nuevoNombre = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Renombrar archivo'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(labelText: 'Nombre del archivo'),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Escribe un nombre para el archivo.'
+                : null,
+            onFieldSubmitted: (_) {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, controller.text.trim());
+              }
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
+          FilledButton.icon(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, controller.text.trim());
+              }
+            },
+            icon: const Icon(Icons.check_rounded),
+            label: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (nuevoNombre == null || nuevoNombre.trim().isEmpty) return;
+    if (nuevoNombre.trim().toLowerCase() == nombreActual.toLowerCase()) return;
+
+    setState(() => _renombrandoId = id);
+    try {
+      final response = await http.patch(
+        Uri.parse('${ApiClient.baseUrl}/api/archivos/$id'),
+        headers: await _apiClient.headers(),
+        body: jsonEncode({'nombre': nuevoNombre.trim()}),
+      );
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        String detalle = 'No se pudo renombrar el archivo.';
+        try {
+          final body = jsonDecode(response.body);
+          if (body is Map<String, dynamic>) {
+            detalle = (body['detail'] ?? body['mensaje'] ?? body['message'] ?? detalle)
+                .toString();
+          }
+        } catch (_) {}
+        throw Exception(detalle);
+      }
+      final datos = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      final nombreFinal = (datos['nombre'] ?? nuevoNombre.trim()).toString();
+      await _cargar();
+      if (mounted) {
+        _mensaje(nombreFinal == nuevoNombre.trim()
+            ? 'Archivo renombrado.'
+            : 'Archivo renombrado como "$nombreFinal" porque ese nombre ya existía.');
+      }
+    } catch (error) {
+      if (mounted) {
+        _mensaje(error.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _renombrandoId = null);
     }
   }
 
@@ -346,6 +469,7 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
   @override
   Widget build(BuildContext context) {
     final itemsCount = _carpetas.length + _archivos.length;
+    final buscando = _busqueda.trim().isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         leading: _ruta.isEmpty
@@ -400,13 +524,58 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(18, 8, 18, 100),
                     children: [
+                      TextField(
+                        controller: _busquedaController,
+                        onChanged: _cambioBusqueda,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'Buscar archivos por nombre',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _busqueda.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Limpiar búsqueda',
+                                  onPressed: () {
+                                    _busquedaController.clear();
+                                    _cambioBusqueda('');
+                                  },
+                                  icon: const Icon(Icons.close_rounded),
+                                ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       _ResumenArchivos(
-                          cantidad: itemsCount, carpeta: _nombreCarpetaActual),
+                          cantidad: itemsCount,
+                          carpeta: buscando
+                              ? 'Resultados en todos tus archivos'
+                              : _nombreCarpetaActual),
                       const SizedBox(height: 20),
                       if (itemsCount == 0)
-                        _Vacio(
-                            onUpload: _subirArchivo,
-                            onCreateFolder: _crearCarpeta)
+                        buscando
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 48, horizontal: 20),
+                                child: Column(children: [
+                                  Icon(Icons.search_off_rounded,
+                                      size: 46,
+                                      color: Colors.blueGrey.shade300),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                      'No encontramos archivos con “${_busqueda.trim()}”.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: Colors.blueGrey.shade600)),
+                                ]),
+                              )
+                            : _Vacio(
+                                onUpload: _subirArchivo,
+                                onCreateFolder: _crearCarpeta)
                       else ...[
                         if (_carpetas.isNotEmpty) ...[
                           const _SectionTitle(title: 'Carpetas'),
@@ -436,7 +605,9 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                         if (_archivos.isNotEmpty) ...[
                           const SizedBox(height: 10),
                           Row(children: [
-                            const Expanded(child: _SectionTitle(title: 'Archivos')),
+                            Expanded(
+                                child: _SectionTitle(
+                                    title: buscando ? 'Resultados' : 'Archivos')),
                             Text(_vistaGrilla ? 'Grilla' : 'Lista',
                                 style: TextStyle(color: Colors.blueGrey.shade600)),
                           ]),
@@ -485,7 +656,10 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
     final mime = archivo['tipoMime'] as String?;
     final imagen = _esImagen(nombre, mime);
     final video = _esVideo(nombre, mime);
-    final cargando = id != null && (_descargandoId == id || _eliminandoId == id);
+    final cargando = id != null &&
+        (_descargandoId == id ||
+            _eliminandoId == id ||
+            _renombrandoId == id);
     final previsualizando = id != null && _previsualizandoId == id;
     final Future<void> Function()? abrir = imagen
         ? () => _previsualizarImagen(archivo)
@@ -529,6 +703,12 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                       color: const Color(0xFF5B5CE2)),
             ),
             IconButton(
+              tooltip: 'Renombrar archivo',
+              onPressed: cargando ? null : () => _renombrarArchivo(archivo),
+              icon: const Icon(Icons.edit_outlined,
+                  color: Color(0xFF5B5CE2)),
+            ),
+            IconButton(
               tooltip: 'Mover a la papelera',
               onPressed: cargando ? null : () => _enviarAPapelera(archivo),
               icon: const Icon(Icons.delete_outline_rounded,
@@ -567,7 +747,9 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                 child: PopupMenuButton<String>(
                   tooltip: 'Acciones del archivo',
                   onSelected: (accion) {
-                    if (accion == 'papelera') {
+                    if (accion == 'renombrar') {
+                      _renombrarArchivo(archivo);
+                    } else if (accion == 'papelera') {
                       _enviarAPapelera(archivo);
                     } else if (accion == 'abrir') {
                       if (abrir != null) abrir();
@@ -581,6 +763,8 @@ class _ExploradorScreenState extends State<ExploradorScreen> {
                       PopupMenuItem(
                           value: 'abrir',
                           child: Text(imagen ? 'Previsualizar' : 'Reproducir')),
+                    const PopupMenuItem(
+                        value: 'renombrar', child: Text('Renombrar')),
                     if (!video)
                       const PopupMenuItem(
                           value: 'descargar', child: Text('Descargar')),
