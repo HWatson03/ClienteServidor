@@ -1,0 +1,165 @@
+{
+  "formRules": {
+    "required": "Ingrese {0}",
+    "selectRequired": "Seleccione {0}",
+    "minLength": "{0} debe tener al menos {1} caracteres",
+    "maxLength": "{0} puede tener como máximo {1} caracteres",
+    "length": "{0} debe tener {1} caracteres",
+    "alreadyExists": "{0} `{1}` ya existe",
+    "startWith": "{0} debe comenzar con `{1}`",
+    "invalidURL": "Ingrese una URL válida",
+    "sizeLimit": "El tamaño del archivo no puede superar {0}MB",
+    "previewWarning": "No se pudo abrir el archivo, no hay URL o dirección de vista previa disponible"
+  },
+  "actionTitle": {
+    "edit": "Modificar {0}",
+    "create": "Crear {0}",
+    "delete": "Eliminar {0}",
+    "view": "Ver {0}"
+  },
+  "actionMessage": {
+    "deleteConfirm": "¿Seguro que deseas eliminar {0}?",
+    "deleting": "Eliminando {0} ...",
+    "deleteSuccess": "{0} eliminado correctamente",
+    "operationSuccess": "Operación exitosa",
+    "operationFailed": "Operación fallida"
+  },
+  "placeholder": {
+    "input": "Ingrese",
+    "select": "Seleccione",
+    "upload": "Clic para subir"
+  },
+  "captcha": {
+    "title": "Complete la verificación de seguridad",
+    "sliderSuccessText": "Superado",
+    "sliderDefaultText": "Desliza para verificar",
+    "alt": "Admite el valor del atributo src de la etiqueta img",
+    "sliderRotateDefaultTip": "Clic en la imagen para refrescar",
+    "sliderTranslateDefaultTip": "Clic en la imagen para refrescar",
+    "sliderRotateFailTip": "Verificación fallida",
+    "sliderRotateSuccessTip": "Verificación exitosa, tiempo {0} segundos",
+    "sliderTranslateFailTip": "Verificación fallida",
+    "sliderTranslateSuccessTip": "Verificación exitosa, tiempo {0} segundos",
+    "refreshAriaLabel": "Refrescar captcha",
+    "confirmAriaLabel": "Confirmar selección",
+    "confirm": "Confirmar",
+    "pointAriaLabel": "Clic en el punto",
+    "clickInOrder": "Por favor haga clic en orden"
+  },
+  "iconPicker": {
+    "placeholder": "Seleccione un ícono",
+    "search": "Buscar ícono..."
+  },
+  "jsonViewer": {
+    "copy": "Copiar",
+    "copied": "Copiado"
+  },
+  "crop": {
+    "title": "Recorte de imagen",
+    "titleTip": "Relación de recorte {0}",
+    "confirm": "Recortar",
+    "cancel": "Cancelar recorte",
+    "errorTip": "Error al recortar"
+  },
+  "tiptap": {
+    "placeholder": "Ingrese el contenido...",
+    "prompts": {
+      "image": "Ingrese la URL de la imagen",
+      "link": "Ingrese la URL del enlace"
+    },
+    "toolbar": {
+      "bold": "Negrita",
+      "italic": "Cursiva",
+      "underline": "Subrayado",
+      "strike": "Tachado",
+      "code": "Código",
+      "codeBlock": "Bloque de código",
+      "heading": "Título",
+      "paragraph": "Párrafo",
+      "heading1": "H1",
+      "heading2": "H2",
+      "heading3": "H3",
+      "heading4": "H4",
+      "bulletList": "Lista",
+      "orderedList": "Numeración",
+      "blockquote": "Cita",
+      "link": "Enlace",
+      "unlink": "Quitar enlace",
+      "image": "Imagen",
+      "imageUrl": "URL de la imagen",
+      "imageUpload": "Subir imagen",
+      "textColor": "Color de texto",
+      "highlightColor": "Color de resaltado",
+      "alignLeft": "Izquierda",
+      "alignCenter": "Centro",
+      "alignRight": "Derecha",
+      "preview": "Vista previa",
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "clear": "Limpiar"
+    },
+    "upload": {
+      "fileTooLarge": "El archivo supera el límite de tamaño",
+      "fileTypeNotAllowed": "El tipo de archivo no está permitido",
+      "onlySingleImage": "Solo se admite subir una imagen, se seleccionó la primera",
+      "uploadFailed": "Error al subir"
+    }
+  },
+  "fallback": {
+    "pageNotFound": "¡Ups! Página no encontrada",
+    "pageNotFoundDesc": "Lo sentimos, no pudimos encontrar la página que buscas.",
+    "forbidden": "¡Ups! Acceso denegado",
+    "forbiddenDesc": "Lo sentimos, no tienes permiso para acceder a esta página.",
+    "internalError": "¡Ups! Algo salió mal",
+    "internalErrorDesc": "Lo sentimos, el servidor encontró un error.",
+    "offline": "Página sin conexión",
+    "offlineError": "¡Ups! Error de red",
+    "offlineErrorDesc": "Lo sentimos, no se puede conectar a internet. Revisa tu conexión.",
+    "comingSoon": "Próximamente",
+    "http": {
+      "requestTimeout": "La solicitud expiró. Inténtalo de nuevo más tarde.",
+      "networkError": "Ocurrió un error de red. Revisa tu conexión a internet e inténtalo de nuevo.",
+      "badRequest": "Solicitud incorrecta. Revisa tus datos e inténtalo de nuevo.",
+      "unauthorized": "No autorizado. Inicia sesión para continuar.",
+      "forbidden": "Prohibido. No tienes permiso para acceder a este recurso.",
+      "notFound": "No encontrado. El recurso solicitado no existe.",
+      "internalServerError": "Error interno del servidor. Algo salió mal. Inténtalo de nuevo más tarde."
+    }
+  },
+  "widgets": {
+    "document": "Documento",
+    "qa": "Preguntas y respuestas",
+    "setting": "Configuración",
+    "logoutTip": "¿Deseas cerrar sesión?",
+    "viewAll": "Ver todos los mensajes",
+    "notifications": "Notificaciones",
+    "markAllAsRead": "Marcar todo como leído",
+    "clearNotifications": "Limpiar",
+    "checkUpdatesTitle": "Nueva versión disponible",
+    "checkUpdatesDescription": "Haz clic para refrescar y obtener la última versión",
+    "search": {
+      "title": "Buscar",
+      "searchNavigate": "Navegación",
+      "select": "Seleccionar",
+      "navigate": "Navegar",
+      "close": "Cerrar",
+      "noResults": "Sin resultados",
+      "noRecent": "Sin historial de búsqueda",
+      "recent": "Historial de búsqueda"
+    },
+    "lockScreen": {
+      "title": "Bloquear pantalla",
+      "screenButton": "Desbloquear",
+      "password": "Contraseña",
+      "placeholder": "Ingrese la contraseña",
+      "unlock": "Clic para desbloquear",
+      "errorPasswordTip": "Contraseña incorrecta, ingrésela de nuevo",
+      "backToLogin": "Volver al inicio de sesión",
+      "entry": "Entrar al sistema"
+    },
+    "timezone": {
+      "setTimezone": "Configurar zona horaria",
+      "setSuccess": "Zona horaria configurada correctamente"
+    }
+  }
+}

@@ -112,6 +112,25 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>build-vue-frontend</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>pnpm</executable>
+                            <workingDirectory>${project.basedir}/../web-app</workingDirectory>
+                            <arguments>
+                                <argument>--filter</argument>
+                                <argument>@vben/web-antd</argument>
+                                <argument>run</argument>
+                                <argument>build</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
                     <mainClass>org.servidor.personal.clienteservidor.ClienteServidorApplication</mainClass>
                 </configuration>

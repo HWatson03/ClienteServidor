@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+    <meta name="theme-color" content="#0b5fd6" />
+    <meta name="description" content="SEMFA · Evaluación del jurado desde el navegador del celular, también sin señal." />
+    <title>SEMFA · Jurado</title>
+    <link rel="icon" href="/logo_sistema_head.ico" />
+    <!--
+      App web LIGERA del jurado (sin la administración): para quien no tiene la APK o no
+      tiene Android. Pinta el fondo y un aviso de carga al instante, aunque el JS tarde en
+      llegar con la red saturada. El tema se aplica antes de pintar para que no parpadee.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem('semfa.jw.tema');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; background: #fff; color: #333; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+      html.dark, html.dark body { background: #1c1f24; color: #f2f2f2; }
+      #jw-cargando { display: grid; min-height: 100dvh; place-content: center; gap: 12px; text-align: center; }
+      #jw-cargando b { font-size: 28px; font-weight: 800; letter-spacing: .02em; }
+      #jw-cargando span { opacity: .65; font-size: 14px; }
+      #jw-cargando s { display: block; width: 140px; height: 3px; margin: 4px auto 0; overflow: hidden; border-radius: 3px; background: rgba(127,127,127,.25); text-decoration: none; }
+      #jw-cargando s::after { content: ''; display: block; width: 40%; height: 100%; background: #0b5fd6; animation: jw 1.1s ease-in-out infinite; }
+      @keyframes jw { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+      @media (prefers-reduced-motion: reduce) { #jw-cargando s::after { animation: none; width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="jw-cargando" role="status">
+        <b>SEMFA</b>
+        <span>Evaluación del jurado</span>
+        <s aria-hidden="true"></s>
+      </div>
+    </div>
+    <script type="module" src="/src/jurado-main.ts"></script>
+  </body>
+</html>

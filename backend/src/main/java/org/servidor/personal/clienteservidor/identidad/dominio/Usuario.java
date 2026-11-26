@@ -28,6 +28,13 @@ public class Usuario extends Auditoria {
     @Column(name = "cuota_max_bytes", nullable = false)
     private Long cuotaMaxBytes = 1000000000L;
 
+    @Column(name = "rol", nullable = false, length = 20)
+    private String rol = "CLIENTE";
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_persona", unique = true)
+    private Persona persona;
+
 
 
 

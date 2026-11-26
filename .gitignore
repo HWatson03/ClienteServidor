@@ -3,6 +3,8 @@ HELP.md
 backend/.env
 app_movil/.env
 target/
+backend/src/main/resources/static/vue/
+src/main/resources/static/vue/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

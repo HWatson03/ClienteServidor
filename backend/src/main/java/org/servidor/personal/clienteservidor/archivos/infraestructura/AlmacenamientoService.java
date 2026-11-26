@@ -73,6 +73,18 @@ public class AlmacenamientoService {
         return archivo;
     }
 
+    public EspacioDisco espacioDisco() {
+        try {
+            Path root = root().toAbsolutePath().normalize();
+            var store = Files.getFileStore(root);
+            return new EspacioDisco(store.getTotalSpace(), store.getUsableSpace());
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudo consultar el espacio del almacenamiento", e);
+        }
+    }
+
+    public record EspacioDisco(long total, long disponible) {}
+
     public void moverAFinal(String claveTemporal, String claveFinal) throws IOException {
         Path origen = temp().resolve(claveTemporal);
         Path destino = root().resolve(claveFinal);

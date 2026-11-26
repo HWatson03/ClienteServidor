@@ -2,6 +2,7 @@ package org.servidor.personal.clienteservidor.archivos.presentacion;
 
 import lombok.RequiredArgsConstructor;
 import org.servidor.personal.clienteservidor.archivos.aplicacion.PapeleraService;
+import org.servidor.personal.clienteservidor.archivos.aplicacion.ActividadArchivosService;
 import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
 import org.servidor.personal.clienteservidor.archivos.dominio.Carpeta;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.ArchivoRepository;
@@ -24,6 +25,7 @@ public class PapeleraApi {
     private final ArchivoRepository archivoRepository;
     private final CarpetaRepository carpetaRepository;
     private final AutenticacionUtil autenticacionUtil;
+    private final ActividadArchivosService actividadArchivosService;
 
     @GetMapping
     public List<Map<String, Object>> listar() {
@@ -48,7 +50,7 @@ public class PapeleraApi {
         return resultado;
     }
 
-    @DeleteMapping("/archivos/{id}") public void enviarAPapelera(@PathVariable Long id) { papeleraService.enviarArchivoAPapelera(autenticacionUtil.nombreUsuarioAutenticado(), id); }
-    @PostMapping("/{tipo}/{id}/restaurar") public Map<String, String> restaurar(@PathVariable String tipo, @PathVariable Long id) { return Map.of("nombre", papeleraService.restaurar(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id)); }
-    @DeleteMapping("/{tipo}/{id}") public void eliminarDefinitivamente(@PathVariable String tipo, @PathVariable Long id) { papeleraService.eliminarDefinitivamente(autenticacionUtil.nombreUsuarioAutenticado(), tipo, id); }
+    @DeleteMapping("/archivos/{id}") public void enviarAPapelera(@PathVariable Long id) { String usuario = autenticacionUtil.nombreUsuarioAutenticado(); papeleraService.enviarArchivoAPapelera(usuario, id); actividadArchivosService.registrar(usuario, "PAPELERA", "Archivo #" + id, 0); }
+    @PostMapping("/{tipo}/{id}/restaurar") public Map<String, String> restaurar(@PathVariable String tipo, @PathVariable Long id) { String usuario = autenticacionUtil.nombreUsuarioAutenticado(); String nombre = papeleraService.restaurar(usuario, tipo, id); actividadArchivosService.registrar(usuario, "RESTAURACION", nombre, 0); return Map.of("nombre", nombre); }
+    @DeleteMapping("/{tipo}/{id}") public void eliminarDefinitivamente(@PathVariable String tipo, @PathVariable Long id) { String usuario = autenticacionUtil.nombreUsuarioAutenticado(); papeleraService.eliminarDefinitivamente(usuario, tipo, id); actividadArchivosService.registrar(usuario, "ELIMINACION", tipo + " #" + id, 0); }
 }

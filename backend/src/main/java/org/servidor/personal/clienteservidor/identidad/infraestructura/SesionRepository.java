@@ -19,6 +19,9 @@ public interface SesionRepository extends JpaRepository<Sesion, Long> {
 
     List<Sesion> findByUsuarioAndRevocadaFalseAndExpiraEnAfter(Usuario usuario, LocalDateTime ahora);
 
+    @Query("SELECT s FROM Sesion s WHERE s.usuario.idUsuario = :usuarioId AND s.revocada = false AND s.expiraEn > :ahora ORDER BY s.fechaCreacion DESC")
+    List<Sesion> findActivasPorUsuarioId(@Param("usuarioId") Long usuarioId, @Param("ahora") LocalDateTime ahora);
+
     @Modifying
     @Query("UPDATE Sesion s SET s.revocada = true WHERE s.usuario = :usuario AND s.revocada = false")
     int revocarTodas(@Param("usuario") Usuario usuario);

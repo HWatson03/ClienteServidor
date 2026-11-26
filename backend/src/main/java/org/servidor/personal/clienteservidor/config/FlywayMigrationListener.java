@@ -11,6 +11,11 @@ public final class FlywayMigrationListener implements ApplicationListener<Applic
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
         Environment environment = event.getEnvironment();
+        // Los tests usan un esquema H2 administrado por Hibernate y no deben
+        // intentar conectarse a la base PostgreSQL configurada en el .env.
+        if (environment.acceptsProfiles(org.springframework.core.env.Profiles.of("test"))) {
+            return;
+        }
         if (!environment.getProperty("spring.flyway.enabled", Boolean.class, true)) {
             return;
         }

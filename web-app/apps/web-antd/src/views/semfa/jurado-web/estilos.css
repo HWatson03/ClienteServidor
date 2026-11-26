@@ -1,0 +1,241 @@
+/*
+ * Estilos de la app web ligera del jurado (`jurado.html`). Tailwind solo escanea esta
+ * carpeta (no todo el monorepo como la administración), así el CSS baja en pocos KB.
+ * Colores: los mismos tokens de vben (`--primary`, `--card`…) y las reglas de SEMFA que
+ * usan las pantallas del jurado (`styles/semfa.css`: puntajes, niveles, chips, botones),
+ * copiadas aquí porque `semfa.css` trae además todo lo de la administración.
+ */
+@import 'tailwindcss' source(none);
+
+@source './';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-destructive: hsl(var(--destructive));
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 210 6% 21%;
+  --card: 0 0% 100%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --border: 240 5.9% 90%;
+  --primary: 212 100% 45%;
+  --primary-foreground: 0 0% 98%;
+  --destructive: 359.33 100% 65.1%;
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: 222.34deg 10.43% 12.27%;
+  --foreground: 0 0% 95%;
+  --card: 222.34deg 10.43% 15%;
+  --muted: 240 3.7% 19%;
+  --muted-foreground: 240 5% 64.9%;
+  --border: 240 3.7% 24%;
+  --destructive: 359.21 68.47% 56.47%;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#app {
+  height: 100%;
+}
+
+/* ------------------------------------------------------------------ botones 3D (sin ant-design) */
+.semfa-btn {
+  --semfa-c: var(--primary);
+  --semfa-canto: color-mix(in srgb, hsl(var(--semfa-c)) 70%, black);
+  --semfa-halo: hsl(var(--semfa-c) / 35%);
+
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  font-size: 16px;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  user-select: none;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: 0 2px 0 hsl(var(--border));
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.semfa-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.semfa-btn:focus-visible {
+  outline: 2px solid hsl(var(--semfa-c) / 50%);
+  outline-offset: 2px;
+}
+
+.semfa-btn:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+.semfa-btn--primario,
+.semfa-btn--peligro {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, hsl(var(--semfa-c)) 82%, white) 0%, hsl(var(--semfa-c)) 100%);
+  border-color: color-mix(in srgb, hsl(var(--semfa-c)) 85%, black);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 var(--semfa-canto),
+    0 4px 10px -2px var(--semfa-halo);
+}
+
+.semfa-btn--peligro {
+  --semfa-c: var(--destructive);
+}
+
+.semfa-btn--neutro {
+  background: hsl(var(--muted));
+}
+
+/* ------------------------------------------------------------------ chips, barra de avance */
+.semfa-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 9999px;
+  box-shadow: 0 1px 0 hsl(var(--border));
+}
+
+.semfa-chip.is-activo {
+  color: #fff;
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 color-mix(in srgb, hsl(var(--primary)) 70%, black);
+}
+
+.semfa-barra {
+  height: 6px;
+  overflow: hidden;
+  background: hsl(var(--muted));
+  border-radius: 9999px;
+}
+
+.semfa-barra > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.5s ease;
+}
+
+/* ------------------------------------------------------------------ niveles y botones de puntaje */
+.semfa-nivel--excelente {
+  --semfa-nivel: 160 84% 36%;
+}
+
+.semfa-nivel--bueno {
+  --semfa-nivel: 199 89% 42%;
+}
+
+.semfa-nivel--muy-bueno {
+  --semfa-nivel: 178 72% 34%;
+}
+
+.semfa-nivel--regular {
+  --semfa-nivel: 38 92% 46%;
+}
+
+.semfa-nivel--deficiente {
+  --semfa-nivel: 0 72% 51%;
+}
+
+.semfa-nivel-texto {
+  font-weight: 600;
+  color: hsl(var(--semfa-nivel));
+}
+
+.semfa-puntaje {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  user-select: none;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: 0 2px 0 hsl(var(--border));
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.semfa-puntaje:active:not(:disabled) {
+  box-shadow: 0 0 0 hsl(var(--border));
+  transform: translateY(2px);
+}
+
+.semfa-puntaje:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 55%);
+  outline-offset: 2px;
+}
+
+.semfa-puntaje.is-activo {
+  color: #fff;
+  background: hsl(var(--semfa-nivel));
+  border-color: hsl(var(--semfa-nivel));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 3px 0 hsl(var(--semfa-nivel) / 55%),
+    0 6px 14px -6px hsl(var(--semfa-nivel) / 70%);
+  transform: translateY(-1px);
+}
+
+@media (hover: hover) {
+  .semfa-puntaje:hover:not(:disabled) {
+    border-color: hsl(var(--primary) / 45%);
+  }
+}

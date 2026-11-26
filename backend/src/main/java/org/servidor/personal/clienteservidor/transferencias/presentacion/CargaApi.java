@@ -3,6 +3,7 @@ package org.servidor.personal.clienteservidor.transferencias.presentacion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
+import org.servidor.personal.clienteservidor.archivos.aplicacion.ActividadArchivosService;
 import org.servidor.personal.clienteservidor.archivos.presentacion.dto.ArchivoResponse;
 import org.servidor.personal.clienteservidor.infraestructura.AutenticacionUtil;
 import org.servidor.personal.clienteservidor.transferencias.aplicacion.CargaService;
@@ -24,11 +25,12 @@ import java.io.IOException;
 public class CargaApi {
     private final CargaService cargaService;
     private final AutenticacionUtil autenticacionUtil;
+    private final ActividadArchivosService actividadArchivosService;
     @PostMapping("/prevalidar") public PrevalidacionCargaResponse prevalidar(@Valid @RequestBody IniciarCargaRequest request) { long disponible = cargaService.validarEspacio(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaDestinoId(), request.tamanoEsperado()); return new PrevalidacionCargaResponse(request.tamanoEsperado(), disponible); }
     @PostMapping @ResponseStatus(HttpStatus.CREATED) public CargaResponse iniciar(@Valid @RequestBody IniciarCargaRequest request) { Carga carga = cargaService.iniciar(autenticacionUtil.nombreUsuarioAutenticado(), request.carpetaDestinoId(), request.nombreArchivo(), request.tamanoEsperado()); return respuesta(carga); }
     @GetMapping("/{id}") public CargaResponse consultar(@PathVariable Long id) { return respuesta(cargaService.consultar(autenticacionUtil.nombreUsuarioAutenticado(), id)); }
     @PutMapping("/{id}/fragmento") public CargaResponse subirFragmento(@PathVariable Long id, @RequestParam long offset, @RequestParam("file") MultipartFile file) throws IOException { return respuesta(cargaService.subirFragmento(autenticacionUtil.nombreUsuarioAutenticado(), id, offset, file.getInputStream())); }
-    @PostMapping("/{id}/finalizar") public FinalizarCargaResponse finalizar(@PathVariable Long id) { var resultado = cargaService.finalizar(autenticacionUtil.nombreUsuarioAutenticado(), id); Archivo archivo = resultado.archivo(); return new FinalizarCargaResponse(new ArchivoResponse(archivo.getIdArchivo(), archivo.getNombreVisible(), archivo.getTamano(), archivo.getTipoMime()), resultado.duplicado()); }
+    @PostMapping("/{id}/finalizar") public FinalizarCargaResponse finalizar(@PathVariable Long id) { var usuario = autenticacionUtil.nombreUsuarioAutenticado(); var resultado = cargaService.finalizar(usuario, id); Archivo archivo = resultado.archivo(); actividadArchivosService.registrar(usuario, "SUBIDA", archivo.getNombreVisible(), archivo.getTamano()); return new FinalizarCargaResponse(new ArchivoResponse(archivo.getIdArchivo(), archivo.getNombreVisible(), archivo.getTamano(), archivo.getTipoMime()), resultado.duplicado()); }
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void cancelar(@PathVariable Long id) { cargaService.cancelar(autenticacionUtil.nombreUsuarioAutenticado(), id); }
 
     private CargaResponse respuesta(Carga carga) { return new CargaResponse(carga.getIdCarga(), carga.getOffsetConfirmado(), carga.getEstado(), carga.getTamanoEsperado()); }

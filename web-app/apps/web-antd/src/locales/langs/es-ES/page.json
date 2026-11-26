@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "codeLogin": "Código de acceso",
+    "qrcodeLogin": "Código QR",
+    "forgetPassword": "¿Olvidaste tu contraseña?",
+    "profile": "Perfil"
+  }
+}

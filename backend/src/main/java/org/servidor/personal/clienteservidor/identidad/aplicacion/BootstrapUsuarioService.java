@@ -33,6 +33,13 @@ public class BootstrapUsuarioService implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (usuarioRepository.count() > 0) {
+            usuarioRepository.findByNombreUsuarioIgnoreCase(bootstrapUsuario == null ? "" : bootstrapUsuario.trim())
+                    .ifPresent(u -> {
+                        if (!"ADMIN".equals(u.getRol())) {
+                            u.setRol("ADMIN");
+                            usuarioRepository.save(u);
+                        }
+                    });
             return;
         }
         String usuario = bootstrapUsuario;
@@ -45,6 +52,7 @@ public class BootstrapUsuarioService implements ApplicationRunner {
         u.setContrasenaHash(passwordEncoder.encode(contrasena));
         u.setCuotaMaxBytes(1000000000L);
         u.setEstado("ACTIVO");
+        u.setRol("ADMIN");
         usuarioRepository.save(u);
 
         Carpeta raiz = new Carpeta();

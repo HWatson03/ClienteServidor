@@ -3,6 +3,7 @@ package org.servidor.personal.clienteservidor.archivos.presentacion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.servidor.personal.clienteservidor.archivos.aplicacion.ArchivoService;
+import org.servidor.personal.clienteservidor.archivos.aplicacion.ActividadArchivosService;
 import org.servidor.personal.clienteservidor.archivos.dominio.Archivo;
 import org.servidor.personal.clienteservidor.archivos.infraestructura.AlmacenamientoService;
 import org.servidor.personal.clienteservidor.archivos.presentacion.dto.ArchivoResponse;
@@ -30,16 +31,19 @@ public class ArchivoApi {
     private final ArchivoService archivoService;
     private final AlmacenamientoService almacenamientoService;
     private final AutenticacionUtil autenticacionUtil;
+    private final ActividadArchivosService actividadArchivosService;
     @GetMapping public PaginaResponse<ArchivoResponse> listar(@RequestParam(required = false) Long carpetaId, @RequestParam(required = false) String nombre, @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "50") int tamano) { Page<ArchivoResponse> page = archivoService.listar(autenticacionUtil.nombreUsuarioAutenticado(), carpetaId, nombre, pagina, tamano).map(a -> new ArchivoResponse(a.getIdArchivo(), a.getNombreVisible(), a.getTamano(), a.getTipoMime())); return new PaginaResponse<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(), page.isFirst(), page.isLast()); }
-    @PatchMapping("/{id}") public Map<String, String> renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { return Map.of("nombre", archivoService.renombrar(autenticacionUtil.nombreUsuarioAutenticado(), id, request.nombre())); }
+    @PatchMapping("/{id}") public Map<String, String> renombrar(@PathVariable Long id, @Valid @RequestBody RenombrarRequest request) { String usuario = autenticacionUtil.nombreUsuarioAutenticado(); String nombre = archivoService.renombrar(usuario, id, request.nombre()); actividadArchivosService.registrar(usuario, "RENOMBRE", nombre, 0); return Map.of("nombre", nombre); }
 
     @GetMapping("/{id}/descargar")
     public ResponseEntity<Resource> descargar(@PathVariable Long id) {
-        Archivo archivo = archivoService.obtenerParaDescarga(autenticacionUtil.nombreUsuarioAutenticado(), id);
+        String usuario = autenticacionUtil.nombreUsuarioAutenticado();
+        Archivo archivo = archivoService.obtenerParaDescarga(usuario, id);
         Path ruta = almacenamientoService.obtenerArchivoFinal(archivo.getClaveDisco());
         if (!Files.isRegularFile(ruta) || !Files.isReadable(ruta)) {
             return ResponseEntity.notFound().build();
         }
+        actividadArchivosService.registrar(usuario, "DESCARGA", archivo.getNombreVisible(), archivo.getTamano());
         String mime = archivo.getTipoMime() == null || archivo.getTipoMime().isBlank()
                 ? MediaType.APPLICATION_OCTET_STREAM_VALUE : archivo.getTipoMime();
         return ResponseEntity.ok()

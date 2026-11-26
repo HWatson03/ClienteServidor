@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1736" />
+    <meta name="description" content="FEXCOIN ECUANA V5: la feria de innovación más grande de Pando. Universidad Amazónica de Pando, 13 y 14 de noviembre." />
+    <meta property="og:title" content="FEXCOIN ECUANA V5 · UAP" />
+    <meta property="og:description" content="La feria de innovación más grande de Pando. Proyectos, agenda y mapa de stands en vivo." />
+    <title>FEXCOIN ECUANA V5 - UAP</title>
+    <link rel="icon" type="image/png" href="/fexcoin/escudo-48.png" />
+    <!--
+      Página pública aparte (sin la administración): pinta el fondo y un aviso de carga al
+      instante, aunque el JS tarde en llegar con la red saturada de la feria.
+    -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; background: #0b1736; color: #fff; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+      #feria-cargando { display: grid; min-height: 100dvh; place-content: center; gap: 14px; text-align: center; }
+      #feria-cargando b { font-size: 34px; font-weight: 900; letter-spacing: .02em; }
+      #feria-cargando b i { color: #f5c518; font-style: normal; }
+      #feria-cargando span { color: #b9c6e4; font-size: 14px; }
+      #feria-cargando s { display: block; width: 140px; height: 3px; margin: 4px auto 0; overflow: hidden; border-radius: 3px; background: #1b2c5c; text-decoration: none; }
+      #feria-cargando s::after { content: ''; display: block; width: 40%; height: 100%; background: #c8102e; animation: fc 1.1s ease-in-out infinite; }
+      @keyframes fc { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+      @media (prefers-reduced-motion: reduce) { #feria-cargando s::after { animation: none; width: 100%; } }
+    </style>
+  </head>
+  <body class="feria">
+    <div id="app">
+      <div id="feria-cargando" role="status">
+        <b>FEXC<i>O</i>IN <small style="font-size:.5em;color:#ff8a96">ECUANA V5</small></b>
+        <span id="feria-lema">La feria de innovación más grande de Pando</span>
+        <s aria-hidden="true"></s>
+      </div>
+    </div>
+    <script>
+      // Mismo idioma que la página (?lang= o el elegido antes; ver views/semfa/feria/i18n.ts).
+      try {
+        var m = { en: ['en', "Pando's biggest innovation fair"], pt: ['pt-BR', 'A maior feira de inovação de Pando'] }[new URLSearchParams(location.search).get('lang') || localStorage.getItem('semfa-feria-idioma')];
+        if (m) document.documentElement.lang = m[0], document.getElementById('feria-lema').textContent = m[1];
+      } catch (e) {}
+    </script>
+    <script type="module" src="/src/feria-main.ts"></script>
+  </body>
+</html>

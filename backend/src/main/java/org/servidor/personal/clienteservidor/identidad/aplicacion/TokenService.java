@@ -32,6 +32,9 @@ public class TokenService {
             return Optional.empty();
         }
         Usuario usuario = sesion.getUsuario();
+        if (!"ACTIVO".equalsIgnoreCase(usuario.getEstado())) {
+            return Optional.empty();
+        }
         // Force load lazy relation
         usuario.getNombreUsuario();
         return Optional.of(usuario);

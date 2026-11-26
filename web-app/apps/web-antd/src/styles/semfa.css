@@ -1,0 +1,682 @@
+/*
+ * Estilos compartidos de las vistas SEMFA.
+ *
+ * Los colores salen de los tokens de vben (`--primary`, `--destructive`, …, en
+ * formato HSL sin `hsl()`), así que siguen el tema y el modo oscuro.
+ */
+
+/* ------------------------------------------------------------------
+ * Botón 3D ligero: <Button class="semfa-btn semfa-btn--primario">
+ *
+ * Las variantes llevan doble clase (`.ant-btn.semfa-btn.semfa-btn--x`) para
+ * ganarle a reglas de antd como `.ant-btn-default:not(:disabled):hover`.
+ *
+ * Variantes:
+ *   --primario / --peligro          sólidos (acción principal)
+ *   --suave-primario / --suave-peligro  teñidos (acciones de fila)
+ *   --neutro                        fondo de tarjeta (acciones secundarias)
+ *
+ * La profundidad viene de tres sombras: brillo interior arriba, un borde
+ * inferior más oscuro (el «canto») y una sombra difusa del color del botón.
+ * Al pasar el ratón sube 1px; al pulsar se hunde y el canto desaparece.
+ * ------------------------------------------------------------------ */
+.ant-btn.semfa-btn {
+  --semfa-c: var(--primary);
+  --semfa-canto: color-mix(in srgb, hsl(var(--semfa-c)) 70%, black);
+  --semfa-halo: hsl(var(--semfa-c) / 35%);
+
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.ant-btn.semfa-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ant-btn.semfa-btn:active {
+  transform: translateY(1px);
+}
+
+.ant-btn.semfa-btn:focus-visible {
+  outline: 2px solid hsl(var(--semfa-c) / 50%);
+  outline-offset: 2px;
+}
+
+.ant-btn.semfa-btn[disabled] {
+  box-shadow: none;
+  transform: none;
+}
+
+/* --- Sólidos --- */
+.ant-btn.semfa-btn.semfa-btn--primario,
+.ant-btn.semfa-btn.semfa-btn--peligro {
+  color: #fff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, hsl(var(--semfa-c)) 82%, white) 0%,
+    hsl(var(--semfa-c)) 100%
+  );
+  border-color: color-mix(in srgb, hsl(var(--semfa-c)) 85%, black);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 var(--semfa-canto),
+    0 4px 10px -2px var(--semfa-halo);
+}
+
+.ant-btn.semfa-btn.semfa-btn--primario:hover,
+.ant-btn.semfa-btn.semfa-btn--peligro:hover {
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    0 3px 0 var(--semfa-canto),
+    0 8px 16px -4px var(--semfa-halo);
+  filter: brightness(1.06);
+}
+
+.ant-btn.semfa-btn.semfa-btn--primario:active,
+.ant-btn.semfa-btn.semfa-btn--peligro:active {
+  box-shadow:
+    inset 0 2px 3px rgb(0 0 0 / 15%),
+    0 0 0 var(--semfa-canto),
+    0 1px 3px -1px var(--semfa-halo);
+  filter: brightness(0.97);
+}
+
+.ant-btn.semfa-btn.semfa-btn--peligro,
+.ant-btn.semfa-btn.semfa-btn--suave-peligro {
+  --semfa-c: var(--destructive);
+}
+
+/* --- Teñidos (acciones dentro de la tabla) --- */
+.ant-btn.semfa-btn.semfa-btn--suave-primario,
+.ant-btn.semfa-btn.semfa-btn--suave-peligro {
+  color: hsl(var(--semfa-c));
+  background: hsl(var(--semfa-c) / 10%);
+  border-color: hsl(var(--semfa-c) / 25%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 40%),
+    0 2px 0 hsl(var(--semfa-c) / 22%);
+}
+
+.ant-btn.semfa-btn.semfa-btn--suave-primario:hover,
+.ant-btn.semfa-btn.semfa-btn--suave-peligro:hover {
+  color: #fff;
+  background: hsl(var(--semfa-c));
+  border-color: hsl(var(--semfa-c));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 var(--semfa-canto),
+    0 6px 12px -4px var(--semfa-halo);
+}
+
+.ant-btn.semfa-btn.semfa-btn--suave-primario:active,
+.ant-btn.semfa-btn.semfa-btn--suave-peligro:active {
+  box-shadow:
+    inset 0 2px 3px rgb(0 0 0 / 15%),
+    0 0 0 var(--semfa-canto);
+}
+
+/* --- Neutro (recargar, cancelar…) --- */
+.ant-btn.semfa-btn.semfa-btn--neutro {
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 50%),
+    0 2px 0 hsl(var(--border)),
+    0 3px 8px -3px rgb(0 0 0 / 12%);
+}
+
+.ant-btn.semfa-btn.semfa-btn--neutro:hover {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 40%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 50%),
+    0 3px 0 hsl(var(--primary) / 25%),
+    0 6px 12px -4px rgb(0 0 0 / 15%);
+}
+
+.ant-btn.semfa-btn.semfa-btn--neutro:active {
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 10%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ant-btn.semfa-btn,
+  .ant-btn.semfa-btn:hover,
+  .ant-btn.semfa-btn:active {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Chip de filtro: <button class="semfa-chip" :class="{ 'is-activo': … }">
+ * Filtros de un clic (p. ej. carrera) con el total al lado.
+ * ------------------------------------------------------------------ */
+.semfa-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 9999px;
+  box-shadow: 0 1px 0 hsl(var(--border));
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.semfa-chip:hover:not(:disabled) {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 40%);
+  box-shadow: 0 3px 8px -3px hsl(var(--primary) / 35%);
+  transform: translateY(-1px);
+}
+
+.semfa-chip:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 50%);
+  outline-offset: 2px;
+}
+
+.semfa-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.semfa-chip.is-activo {
+  color: #fff;
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 color-mix(in srgb, hsl(var(--primary)) 70%, black);
+}
+
+.semfa-chip__total {
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: hsl(var(--muted));
+  border-radius: 9999px;
+}
+
+/* Activo y con el mouse encima: sin esto el hover pintaba el texto del color del fondo. */
+.semfa-chip.is-activo:hover:not(:disabled) {
+  color: #fff;
+}
+
+.semfa-chip.is-activo .semfa-chip__total {
+  background: rgb(255 255 255 / 22%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .semfa-chip:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Tabla tipo DataTable: <Table class="semfa-tabla">
+ * ------------------------------------------------------------------ */
+.semfa-tabla .ant-table-thead > tr > th {
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.semfa-tabla .ant-table-tbody > tr > td {
+  transition: background-color 0.15s ease;
+}
+
+/* antd pone 16px arriba y abajo; más ajustado para que la página quepa sin scroll */
+.semfa-tabla.ant-table-wrapper .ant-table-pagination.ant-pagination {
+  padding: 0 12px;
+  margin: 10px 0;
+}
+
+/* ------------------------------------------------------------------
+ * Avisos de resultado (`semfa-avisos.vue` + `useAvisos`)
+ *
+ * Tarjeta con el mismo lenguaje que modales y botones: ícono en una caja
+ * redondeada del color del tipo, título en negrita, texto atenuado, sombra en
+ * capas y un canto de color a la izquierda. La barra inferior es el tiempo.
+ * ------------------------------------------------------------------ */
+.semfa-avisos {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+
+  /* Por encima de los modales de antd (1000) y sus confirmaciones */
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(400px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.semfa-aviso {
+  --semfa-aviso-c: var(--primary);
+
+  position: relative;
+  overflow: hidden;
+  color: hsl(var(--foreground));
+  pointer-events: auto;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-left: 4px solid hsl(var(--semfa-aviso-c));
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 hsl(var(--border)),
+    0 10px 24px -8px rgb(0 0 0 / 18%),
+    0 4px 10px -6px hsl(var(--semfa-aviso-c) / 30%);
+}
+
+.semfa-aviso--exito {
+  --semfa-aviso-c: var(--success);
+}
+
+.semfa-aviso--error {
+  --semfa-aviso-c: var(--destructive);
+}
+
+.semfa-aviso--advertencia {
+  --semfa-aviso-c: var(--warning);
+}
+
+.semfa-aviso__icono {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+
+  /* El tono base de éxito/advertencia es claro: se oscurece para el ícono */
+  color: color-mix(in srgb, hsl(var(--semfa-aviso-c)) 75%, black);
+  background: hsl(var(--semfa-aviso-c) / 14%);
+  border-radius: 10px;
+}
+
+.semfa-aviso__cerrar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px 0 0;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.semfa-aviso__cerrar:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
+}
+
+.semfa-aviso__cerrar:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 50%);
+  outline-offset: 1px;
+}
+
+.semfa-aviso__tiempo {
+  height: 3px;
+  background: hsl(var(--semfa-aviso-c));
+  transform-origin: left;
+  animation: semfa-aviso-tiempo linear forwards;
+}
+
+/* Pasar el ratón detiene el tiempo para poder leer con calma */
+.semfa-aviso:hover .semfa-aviso__tiempo,
+.semfa-aviso:focus-within .semfa-aviso__tiempo {
+  animation-play-state: paused;
+}
+
+@keyframes semfa-aviso-tiempo {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.semfa-aviso-enter-active,
+.semfa-aviso-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.semfa-aviso-enter-from,
+.semfa-aviso-leave-to {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.semfa-aviso-move {
+  transition: transform 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .semfa-aviso-enter-active,
+  .semfa-aviso-leave-active,
+  .semfa-aviso-move {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Confirmaciones (`confirmar()` de `useAvisos`): mismo marco que los modales
+ * ------------------------------------------------------------------ */
+.semfa-confirmar .ant-modal-content {
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.semfa-confirmar .ant-modal-confirm-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.semfa-confirmar .ant-modal-confirm-content {
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.semfa-confirmar .ant-modal-confirm-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.semfa-confirmar .ant-modal-confirm-btns .ant-btn + .ant-btn {
+  margin-inline-start: 0;
+}
+
+.semfa-confirmar--peligro .ant-modal-confirm-body > .anticon {
+  color: hsl(var(--destructive));
+}
+
+/* ------------------------------------------------------------------
+ * Estado de evaluación: <span class="semfa-estado semfa-estado--ok">
+ * (Panel de evaluación y Mis evaluaciones del jurado).
+ * ------------------------------------------------------------------ */
+.semfa-estado {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+
+.semfa-estado--ok {
+  color: rgb(4 120 87);
+  background: rgb(16 185 129 / 14%);
+}
+
+.semfa-estado--proceso {
+  color: rgb(180 83 9);
+  background: rgb(245 158 11 / 15%);
+}
+
+.semfa-estado--pendiente {
+  color: rgb(71 85 105);
+  background: rgb(148 163 184 / 18%);
+}
+
+.semfa-estado--error {
+  color: rgb(185 28 28);
+  background: rgb(239 68 68 / 13%);
+}
+
+.dark .semfa-estado--ok {
+  color: rgb(110 231 183);
+}
+
+.dark .semfa-estado--proceso {
+  color: rgb(252 211 77);
+}
+
+.dark .semfa-estado--pendiente {
+  color: rgb(203 213 225);
+}
+
+.dark .semfa-estado--error {
+  color: rgb(252 165 165);
+}
+
+/* Barra de avance: <div class="semfa-barra"><span :style="{ width }" class="bg-…" /></div> */
+.semfa-barra {
+  height: 6px;
+  overflow: hidden;
+  background: hsl(var(--muted));
+  border-radius: 9999px;
+}
+
+.semfa-barra > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.5s ease;
+}
+
+/* ------------------------------------------------------------------
+ * Nivel de un puntaje (escala del jurado): fondo del botón elegido y
+ * color de la etiqueta. Ver `views/semfa/jurado/escala.ts`.
+ * ------------------------------------------------------------------ */
+.semfa-nivel--excelente {
+  --semfa-nivel: 160 84% 36%;
+}
+
+.semfa-nivel--bueno {
+  --semfa-nivel: 199 89% 42%;
+}
+
+/* Entre «bueno» (azul) y «excelente» (verde): niveles por rango de 5 (Muy Bueno). */
+.semfa-nivel--muy-bueno {
+  --semfa-nivel: 178 72% 34%;
+}
+
+.semfa-nivel--regular {
+  --semfa-nivel: 38 92% 46%;
+}
+
+.semfa-nivel--deficiente {
+  --semfa-nivel: 0 72% 51%;
+}
+
+.semfa-nivel-texto {
+  font-weight: 600;
+  color: hsl(var(--semfa-nivel));
+}
+
+/* Botón de puntaje: grande para tocar en el celular, 3D como semfa-btn. */
+.semfa-puntaje {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  user-select: none;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: 0 2px 0 hsl(var(--border));
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.semfa-puntaje:hover:not(:disabled) {
+  border-color: hsl(var(--primary) / 45%);
+  transform: translateY(-1px);
+}
+
+.semfa-puntaje:active:not(:disabled) {
+  box-shadow: 0 0 0 hsl(var(--border));
+  transform: translateY(2px);
+}
+
+.semfa-puntaje:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 55%);
+  outline-offset: 2px;
+}
+
+.semfa-puntaje.is-activo {
+  color: #fff;
+  background: hsl(var(--semfa-nivel));
+  border-color: hsl(var(--semfa-nivel));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 3px 0 hsl(var(--semfa-nivel) / 55%),
+    0 6px 14px -6px hsl(var(--semfa-nivel) / 70%);
+  transform: translateY(-1px);
+}
+
+/* ------------------------------------------------------------------
+ * Aspecto de semfa-btn para un <span> dentro de algo ya clicable (una
+ * tarjeta-botón): no se puede anidar un <button>. El contenedor da el
+ * hover; aquí solo va el look 3D.
+ *   <span class="semfa-accion semfa-accion--primario">Evaluar</span>
+ * ------------------------------------------------------------------ */
+.semfa-accion {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.semfa-accion--sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.semfa-accion--primario {
+  color: #fff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, hsl(var(--primary)) 82%, white) 0%,
+    hsl(var(--primary)) 100%
+  );
+  border-color: color-mix(in srgb, hsl(var(--primary)) 85%, black);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 2px 0 color-mix(in srgb, hsl(var(--primary)) 70%, black),
+    0 4px 10px -2px hsl(var(--primary) / 35%);
+}
+
+.semfa-accion--neutro {
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 50%),
+    0 2px 0 hsl(var(--border)),
+    0 3px 8px -3px rgb(0 0 0 / 12%);
+}
+
+/* ------------------------------------------------------------------
+ * Tablas de «Resultados y reportes» (detalle por proyecto, consolidado y
+ * planilla del jurado): sobrias, como los PDF, con cifras alineadas.
+ * ------------------------------------------------------------------ */
+.semfa-reporte-tabla {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.semfa-reporte-tabla th,
+.semfa-reporte-tabla td {
+  padding: 5px 8px;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid hsl(var(--border));
+}
+
+.semfa-reporte-tabla td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tailwind `text-left` no gana a estas reglas (sin capa): usar estas. */
+.semfa-reporte-tabla .is-izq {
+  min-width: 220px;
+  text-align: left;
+  white-space: normal;
+}
+
+.semfa-reporte-tabla .is-der {
+  text-align: right;
+}
+
+.semfa-reporte-tabla th {
+  font-size: 12px;
+  font-weight: 600;
+  background: hsl(var(--muted));
+}
+
+.semfa-reporte-tabla .semfa-reporte-rubrica td {
+  font-weight: 600;
+  text-align: left;
+  background: hsl(var(--accent));
+}
+
+.semfa-reporte-tabla .semfa-reporte-subtotal td,
+.semfa-reporte-tabla tfoot td {
+  font-weight: 600;
+  background: hsl(var(--muted) / 60%);
+}
+
+.semfa-reporte-tabla tfoot td {
+  border-top: 2px solid hsl(var(--border));
+}
+
+.semfa-reporte-tabla tbody tr:hover > td {
+  background: hsl(var(--accent) / 60%);
+}

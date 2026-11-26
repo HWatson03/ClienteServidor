@@ -21,7 +21,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -41,7 +41,12 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/registro", "/api/auth/login").permitAll()
+                        .requestMatchers("/", "/vue", "/vue/**", "/auth/**", "/usuarios", "/cliente", "/profile",
+                                "/fexcoin-vivo", "/fexcoin-vivo/**", "/evaluar", "/evaluar/**").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/solicitudes").permitAll()
+                        .requestMatchers("/api/auth/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/auth/registro").denyAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new TokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -60,18 +65,27 @@ public class SecurityConfig {
                 var usuarioOpt = tokenService.validarToken(token);
                 if (usuarioOpt.isPresent()) {
                     Usuario usuario = usuarioOpt.get();
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario.getNombreUsuario(), null, Collections.emptyList());
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario.getNombreUsuario(), null, List.of(() -> usuario.getRol()));
                     authentication.setDetails(usuario);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
-            } else if (!request.getRequestURI().startsWith("/api/auth/registro") && !request.getRequestURI().startsWith("/api/auth/login")) {
+            } else if (!esRutaPublica(request.getRequestURI())
+                    && !request.getRequestURI().startsWith("/api/auth/login")
+                    && !request.getRequestURI().startsWith("/api/auth/solicitudes")) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
             filterChain.doFilter(request, response);
+        }
+
+        private boolean esRutaPublica(String ruta) {
+            return ruta.equals("/") || ruta.equals("/vue") || ruta.startsWith("/vue/")
+                    || ruta.startsWith("/auth/") || ruta.equals("/usuarios") || ruta.equals("/cliente")
+                    || ruta.equals("/profile") || ruta.equals("/fexcoin-vivo") || ruta.startsWith("/fexcoin-vivo/")
+                    || ruta.equals("/evaluar") || ruta.startsWith("/evaluar/");
         }
     }
 }
