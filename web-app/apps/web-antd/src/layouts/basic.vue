@@ -19,58 +19,7 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
-const notifications = ref<NotificationItem[]>([
-  {
-    id: 1,
-    avatar: 'https://avatar.vercel.sh/vercel.svg?text=VB',
-    date: 'hace 3 horas',
-    isRead: true,
-    message: 'Texto de descripción de ejemplo',
-    title: 'Recibiste 14 nuevos reportes',
-  },
-  {
-    id: 2,
-    avatar: 'https://avatar.vercel.sh/1',
-    date: 'justo ahora',
-    isRead: false,
-    message: 'Texto de descripción de ejemplo',
-    title: 'María López te respondió',
-  },
-  {
-    id: 3,
-    avatar: 'https://avatar.vercel.sh/1',
-    date: '2024-01-01',
-    isRead: false,
-    message: 'Texto de descripción de ejemplo',
-    title: 'Carlos Pérez comentó en tu publicación',
-  },
-  {
-    id: 4,
-    avatar: 'https://avatar.vercel.sh/satori',
-    date: 'hace 1 día',
-    isRead: false,
-    message: 'Texto de descripción de ejemplo',
-    title: 'Recordatorio de pendientes',
-  },
-  {
-    id: 5,
-    avatar: 'https://avatar.vercel.sh/satori',
-    date: 'hace 1 día',
-    isRead: false,
-    message: 'Texto de descripción de ejemplo',
-    title: 'Ejemplo: ir a Workspace',
-    link: '/workspace',
-  },
-  {
-    id: 6,
-    avatar: 'https://avatar.vercel.sh/satori',
-    date: 'hace 1 día',
-    isRead: false,
-    message: 'Texto de descripción de ejemplo',
-    title: 'Ejemplo: enlace externo',
-    link: 'https://doc.vben.pro',
-  },
-]);
+const notifications = ref<NotificationItem[]>([]);
 
 const router = useRouter();
 const userStore = useUserStore();

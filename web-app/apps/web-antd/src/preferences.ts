@@ -28,6 +28,22 @@ export const overridesPreferences = defineOverridesPreferences({
     // El engranaje flotante tapaba contenido en el celular (p. ej. los botones
     // de puntaje del jurado): va en la barra superior.
     preferencesButtonPosition: 'header',
+    contentPadding: 20,
+    contentPaddingBottom: 24,
+  },
+  theme: {
+    mode: 'light',
+    colorPrimary: 'hsl(217 91% 50%)',
+    colorSuccess: 'hsl(161 72% 40%)',
+    colorWarning: 'hsl(38 92% 50%)',
+    colorDestructive: 'hsl(0 78% 56%)',
+    semiDarkSidebar: true,
+  },
+  navigation: {
+    styleType: 'rounded',
+  },
+  sidebar: {
+    width: 248,
   },
   copyright: {
     companyName: 'Lestrade',

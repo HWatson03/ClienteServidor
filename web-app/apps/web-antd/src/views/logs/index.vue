@@ -97,7 +97,7 @@ onUnmounted(() => {
 
 <template>
   <Page title="Logs del sistema">
-    <div class="flex flex-col gap-4 p-4">
+    <div class="system-logs flex min-w-0 flex-col gap-3 px-3 py-3 sm:gap-4 sm:p-4">
       <Alert
         message="Registro en vivo"
         :description="`Archivo activo: ${datos.archivo}. Se muestran como máximo 300 eventos recientes; los archivos rotados se conservan en el servidor.`"
@@ -117,9 +117,9 @@ onUnmounted(() => {
           <Button :loading="cargando" @click="cargar">Actualizar ahora</Button>
         </div>
 
-        <div class="mb-4 flex flex-wrap gap-3">
-          <Input v-model:value="busqueda" allow-clear placeholder="Buscar en los logs" class="max-w-md" />
-          <Select v-model:value="nivel" :options="niveles" class="w-48" />
+        <div class="mb-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
+          <Input v-model:value="busqueda" allow-clear placeholder="Buscar en los logs" class="w-full sm:max-w-md" />
+          <Select v-model:value="nivel" :options="niveles" class="w-full sm:w-48" />
           <span class="self-center text-sm text-gray-500">{{ lineasFiltradas.length }} eventos</span>
         </div>
 
@@ -128,7 +128,7 @@ onUnmounted(() => {
             <Empty description="Todavía no hay un archivo de log. Se creará cuando el sistema escriba el primer evento." />
           </div>
           <div v-else-if="lineasFiltradas.length" class="max-h-[70vh] space-y-3 overflow-auto pr-1">
-            <Card v-for="(entrada, indice) in lineasFiltradas" :key="`${entrada.fecha}-${indice}`" size="small">
+            <Card v-for="(entrada, indice) in lineasFiltradas" :key="`${entrada.fecha}-${indice}`" size="small" class="log-entry" :class="`log-entry--${entrada.nivel.toLowerCase()}`">
               <div class="flex flex-wrap items-center gap-2">
                 <Tag class="m-0 min-w-16 text-center" :color="colorNivel(entrada)">{{ entrada.nivel }}</Tag>
                 <span class="font-mono text-xs text-gray-500">{{ entrada.fecha || 'Hora no disponible' }}</span>

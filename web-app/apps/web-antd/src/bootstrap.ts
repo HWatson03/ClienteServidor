@@ -17,6 +17,7 @@ import App from './app.vue';
 import { router } from './router';
 
 import './styles/semfa.css';
+import './styles/lestrade.css';
 
 async function bootstrap(namespace: string) {
   // Inicializar adaptadores de componentes
