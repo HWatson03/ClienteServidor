@@ -65,6 +65,11 @@ export interface CarpetaAdmin { idCarpeta: number; nombre: string }
 export interface ContenidoCliente { carpetas: CarpetaAdmin[]; archivos: ArchivoCliente[] }
 export interface ItemPapelera { tipo: 'ARCHIVO' | 'CARPETA'; id: number; nombre: string; tamano: number }
 export interface SnapshotAlmacenamiento { capturadoEn: string; bytesTotalServidor: number; bytesDisponiblesServidor: number; bytesOcupadosClientes: number; cantidadClientes: number }
+export interface LogsSistema { archivo: string; disponible: boolean; bytes: number; modificadoEn: string | null; lineas: string[] }
+
+export function obtenerLogsSistema(limite = 500) {
+  return requestClient.get<LogsSistema>('/auth/admin/logs', { params: { limite } });
+}
 
 export function listarUsuarios() {
   return requestClient.get<Usuario[]>('/auth/admin/usuarios');

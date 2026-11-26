@@ -1,6 +1,7 @@
 HELP.md
 .env
 backend/.env
+backend/logs/
 app_movil/.env
 target/
 backend/src/main/resources/static/vue/

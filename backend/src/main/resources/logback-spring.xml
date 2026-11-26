@@ -1,0 +1,60 @@
+<configuration>
+
+    <!-- Directorio configurable mediante LOG_DIR o app.logs.dir. -->
+    <springProperty scope="context" name="LOG_DIR"
+                    source="app.logs.dir"
+                    defaultValue="logs"/>
+
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} [%X{usuario:-sistema}] - %msg%n"/>
+
+    <!-- ── Consola ──────────────────────────────────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss} [%-5level] %logger{36} [%X{usuario:-sistema}] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── Archivo rotativo ──────────────────────────────────────────
+         • lestrade.log          → archivo activo
+         • lestrade-YYYY-MM-DD.log.gz → archivos anteriores comprimidos
+         • maxHistory 30     → elimina automáticamente los de más de 30 días
+         • totalSizeCap      → tope de disco total                     -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/lestrade.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/lestrade-%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>300MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Wrapper asíncrono — no bloquea el hilo de la petición -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- ── Filtros de ruido de frameworks ───────────────────────────── -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+    <logger name="org.apache.catalina" level="WARN"/>
+    <logger name="org.apache.tomcat" level="WARN"/>
+    <logger name="net.sf.jasperreports" level="WARN"/>
+
+    <!-- App propia en INFO -->
+    <logger name="org.servidor.personal.clienteservidor" level="INFO"/>
+
+    <!-- ── Root ─────────────────────────────────────────────────────── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+    </root>
+
+</configuration>

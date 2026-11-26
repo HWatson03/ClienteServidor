@@ -13,6 +13,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('#/views/cliente/index.vue'),
     meta: { authority: ['CLIENTE'], icon: 'lucide:cloud', title: 'Mis archivos' },
   },
+  {
+    path: '/logs',
+    name: 'LogsSistema',
+    component: () => import('#/views/logs/index.vue'),
+    meta: { authority: ['ADMIN'], icon: 'lucide:scroll-text', title: 'Logs del sistema' },
+  },
 ];
 
 export default routes;

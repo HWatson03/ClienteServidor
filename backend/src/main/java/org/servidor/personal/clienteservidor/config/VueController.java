@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class VueController {
 
-    @GetMapping({"/", "/auth/**", "/usuarios", "/cliente", "/profile"})
+    @GetMapping({"/", "/auth/**", "/usuarios", "/cliente", "/profile", "/logs"})
     public String administracion() {
         return "forward:/vue/index.html";
     }

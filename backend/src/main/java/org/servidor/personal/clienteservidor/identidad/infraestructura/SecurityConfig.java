@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/vue", "/vue/**", "/auth/**", "/usuarios", "/cliente", "/profile",
+                        .requestMatchers("/", "/vue", "/vue/**", "/auth/**", "/usuarios", "/cliente", "/profile", "/logs", "/ws/admin/logs",
                                 "/fexcoin-vivo", "/fexcoin-vivo/**", "/evaluar", "/evaluar/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/solicitudes").permitAll()
@@ -84,7 +84,8 @@ public class SecurityConfig {
         private boolean esRutaPublica(String ruta) {
             return ruta.equals("/") || ruta.equals("/vue") || ruta.startsWith("/vue/")
                     || ruta.startsWith("/auth/") || ruta.equals("/usuarios") || ruta.equals("/cliente")
-                    || ruta.equals("/profile") || ruta.equals("/fexcoin-vivo") || ruta.startsWith("/fexcoin-vivo/")
+                    || ruta.equals("/profile") || ruta.equals("/logs") || ruta.equals("/ws/admin/logs")
+                    || ruta.equals("/fexcoin-vivo") || ruta.startsWith("/fexcoin-vivo/")
                     || ruta.equals("/evaluar") || ruta.startsWith("/evaluar/");
         }
     }
