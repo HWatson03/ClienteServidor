@@ -4,9 +4,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Page } from '@vben/common-ui';
 import { Alert, Button, Card, Empty, Input, Select, Spin, Tag, message } from 'ant-design-vue';
 
-import { obtenerLogsSistema, obtenerTicketLogsWebSocket, type LogsSistema } from '#/api/logs-sistema';
+import { obtenerLogsSistema, obtenerTicketLogsWebSocket, type LogEntrada, type LogsSistema } from '#/api/logs-sistema';
 
-const datos = ref<LogsSistema>({ archivo: 'lestrade.log', disponible: false, bytes: 0, modificadoEn: null, lineas: [] });
+const datos = ref<LogsSistema>({ archivo: 'lestrade.log', disponible: false, bytes: 0, modificadoEn: null, entradas: [] });
 const cargando = ref(true);
 const busqueda = ref('');
 const nivel = ref('TODOS');
@@ -24,19 +24,14 @@ const niveles = [
   { label: 'Depuración', value: 'DEBUG' },
 ];
 
-const lineasFiltradas = computed(() => datos.value.lineas
-  .filter((linea) => !busqueda.value || linea.toLowerCase().includes(busqueda.value.toLowerCase()))
-  .filter((linea) => nivel.value === 'TODOS' || linea.includes(`[${nivel.value}`))
+const lineasFiltradas = computed(() => datos.value.entradas
+  .filter((entrada) => !busqueda.value || `${entrada.fecha} ${entrada.origen} ${entrada.usuario} ${entrada.mensaje} ${entrada.detalle}`.toLowerCase().includes(busqueda.value.toLowerCase()))
+  .filter((entrada) => nivel.value === 'TODOS' || entrada.nivel === nivel.value)
   .slice()
   .reverse());
 
-function nivelLinea(linea: string) {
-  const coincidencia = linea.match(/\[(TRACE|DEBUG|INFO|WARN|ERROR)\s*\]/)?.[1] ?? 'DETALLE';
-  return coincidencia;
-}
-
-function colorNivel(linea: string) {
-  const tipo = nivelLinea(linea);
+function colorNivel(entrada: LogEntrada) {
+  const tipo = entrada.nivel;
   if (tipo === 'ERROR') return 'red';
   if (tipo === 'WARN') return 'orange';
   if (tipo === 'INFO') return 'blue';
@@ -105,7 +100,7 @@ onUnmounted(() => {
     <div class="flex flex-col gap-4 p-4">
       <Alert
         message="Registro en vivo"
-        :description="`Archivo activo: ${datos.archivo}. Se muestran como máximo 300 líneas recientes; los archivos rotados se conservan en el servidor.`"
+        :description="`Archivo activo: ${datos.archivo}. Se muestran como máximo 300 eventos recientes; los archivos rotados se conservan en el servidor.`"
         type="info"
         show-icon
       />
@@ -125,22 +120,29 @@ onUnmounted(() => {
         <div class="mb-4 flex flex-wrap gap-3">
           <Input v-model:value="busqueda" allow-clear placeholder="Buscar en los logs" class="max-w-md" />
           <Select v-model:value="nivel" :options="niveles" class="w-48" />
-          <span class="self-center text-sm text-gray-500">{{ lineasFiltradas.length }} líneas</span>
+          <span class="self-center text-sm text-gray-500">{{ lineasFiltradas.length }} eventos</span>
         </div>
 
         <Spin :spinning="cargando">
           <div v-if="!datos.disponible" class="py-10">
             <Empty description="Todavía no hay un archivo de log. Se creará cuando el sistema escriba el primer evento." />
           </div>
-          <div v-else-if="lineasFiltradas.length" class="max-h-[65vh] overflow-auto rounded-lg bg-slate-950 p-3 text-slate-100">
-            <div
-              v-for="(linea, indice) in lineasFiltradas"
-              :key="`${indice}-${linea}`"
-              class="flex gap-3 border-b border-white/5 py-1.5 font-mono text-xs leading-5"
-            >
-              <Tag class="m-0 h-fit min-w-16 text-center" :color="colorNivel(linea)">{{ nivelLinea(linea) }}</Tag>
-              <pre class="m-0 whitespace-pre-wrap break-all">{{ linea }}</pre>
-            </div>
+          <div v-else-if="lineasFiltradas.length" class="max-h-[70vh] space-y-3 overflow-auto pr-1">
+            <Card v-for="(entrada, indice) in lineasFiltradas" :key="`${entrada.fecha}-${indice}`" size="small">
+              <div class="flex flex-wrap items-center gap-2">
+                <Tag class="m-0 min-w-16 text-center" :color="colorNivel(entrada)">{{ entrada.nivel }}</Tag>
+                <span class="font-mono text-xs text-gray-500">{{ entrada.fecha || 'Hora no disponible' }}</span>
+                <span v-if="entrada.origen" class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600">{{ entrada.origen }}</span>
+                <Tag v-if="entrada.usuario" class="m-0" color="purple">{{ entrada.usuario }}</Tag>
+              </div>
+              <p class="mb-0 mt-2 whitespace-pre-wrap break-words font-medium">{{ entrada.mensaje }}</p>
+              <details v-if="entrada.detalle" class="mt-3">
+                <summary class="cursor-pointer select-none text-sm text-blue-600">
+                  Ver detalle técnico ({{ entrada.detalle.split('\n').length }} líneas)
+                </summary>
+                <pre class="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-3 text-xs leading-5 text-slate-100">{{ entrada.detalle }}</pre>
+              </details>
+            </Card>
           </div>
           <Empty v-else description="No hay líneas que coincidan con los filtros." />
         </Spin>

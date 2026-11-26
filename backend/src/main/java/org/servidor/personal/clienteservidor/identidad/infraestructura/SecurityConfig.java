@@ -3,6 +3,7 @@ package org.servidor.personal.clienteservidor.identidad.infraestructura;
 import org.servidor.personal.clienteservidor.identidad.aplicacion.TokenService;
 import org.servidor.personal.clienteservidor.identidad.dominio.Usuario;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -68,6 +69,7 @@ public class SecurityConfig {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario.getNombreUsuario(), null, List.of(() -> usuario.getRol()));
                     authentication.setDetails(usuario);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    MDC.put("usuario", usuario.getNombreUsuario());
                 } else {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
@@ -78,7 +80,11 @@ public class SecurityConfig {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-            filterChain.doFilter(request, response);
+            try {
+                filterChain.doFilter(request, response);
+            } finally {
+                MDC.remove("usuario");
+            }
         }
 
         private boolean esRutaPublica(String ruta) {

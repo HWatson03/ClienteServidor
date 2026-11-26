@@ -65,7 +65,9 @@ public class AuthService {
         datos.setCi(datos.getCi().trim());
         datos.setCorreo(datos.getCorreo().trim().toLowerCase());
         datos.setTelefono(datos.getTelefono().trim());
-        return crearCuenta(datos, nombreUsuario, passwordEncoder.encode(validarContrasena(contrasena)));
+        String hash = passwordEncoder.encode(validarContrasena(contrasena));
+        Persona persona = personaRepository.save(datos);
+        return crearCuenta(persona, nombreUsuario, hash);
     }
 
     @Transactional

@@ -5,7 +5,16 @@ export interface LogsSistema {
   disponible: boolean;
   bytes: number;
   modificadoEn: string | null;
-  lineas: string[];
+  entradas: LogEntrada[];
+}
+
+export interface LogEntrada {
+  fecha: string;
+  nivel: string;
+  origen: string;
+  usuario: string;
+  mensaje: string;
+  detalle: string;
 }
 
 export async function obtenerLogsSistema(limite = 300) {
