@@ -3,6 +3,7 @@ package org.servidor.personal.clienteservidor.compartido.errores;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,13 @@ public class GlobalExceptionHandler {
         log.warn("Método no permitido {} {}", request.getMethod(), request.getRequestURI());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(new ApiError("METODO_NO_PERMITIDO", "Método " + request.getMethod() + " no permitido para " + request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleUploadTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Archivo demasiado grande en {} {}", request.getMethod(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiError("ARCHIVO_DEMASIADO_GRANDE", "La imagen supera el límite permitido de 5 MB"));
     }
 
     @ExceptionHandler(SecurityException.class)

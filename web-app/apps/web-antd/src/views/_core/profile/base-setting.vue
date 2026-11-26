@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
+import { obtenerPerfilApi, type UsuarioActual } from '#/api/core/auth';
+import { message, Spin } from 'ant-design-vue';
 
 import {
   Alert,
@@ -12,30 +14,35 @@ import {
 } from 'ant-design-vue';
 
 const userStore = useUserStore();
+const perfil = ref<UsuarioActual | null>(null);
+const cargando = ref(false);
 
 const userInfo = computed(() => userStore.userInfo ?? null);
-const rol = computed(() => userInfo.value?.roles?.[0] ?? '—');
+const rol = computed(() => perfil.value?.rol ?? userInfo.value?.roles?.[0] ?? '—');
+onMounted(async () => {
+  cargando.value = true;
+  try { perfil.value = await obtenerPerfilApi(); }
+  catch { message.error('No se pudieron cargar los datos del perfil.'); }
+  finally { cargando.value = false; }
+});
 </script>
 
 <template>
   <Card title="Información de la cuenta">
-    <Alert
-      class="mb-4"
-      message="La edición de perfil se añadirá cuando el backend exponga un endpoint de actualización de la propia cuenta. Por ahora los datos provienen de GET /api/auth/me."
-      show-icon
-      type="info"
-    />
-
+    <Spin :spinning="cargando">
     <Descriptions bordered :column="1">
       <DescriptionsItem label="ID de usuario">
-        {{ userInfo?.idUsuario ?? '—' }}
+        {{ perfil?.idUsuario ?? userInfo?.userId ?? '—' }}
       </DescriptionsItem>
       <DescriptionsItem label="Usuario">
-        {{ userInfo?.username ?? '—' }}
+        {{ perfil?.nombreUsuario ?? userInfo?.username ?? '—' }}
       </DescriptionsItem>
       <DescriptionsItem label="Nombre completo">
-        {{ userInfo?.realName ?? '—' }}
+        {{ [perfil?.nombres, perfil?.apellidoPaterno, perfil?.apellidoMaterno].filter(Boolean).join(' ') || userInfo?.realName || '—' }}
       </DescriptionsItem>
+      <DescriptionsItem label="Cédula de identidad">{{ perfil?.ci || '—' }}</DescriptionsItem>
+      <DescriptionsItem label="Correo electrónico">{{ perfil?.correo || '—' }}</DescriptionsItem>
+      <DescriptionsItem label="Teléfono">{{ perfil?.telefono || '—' }}</DescriptionsItem>
       <DescriptionsItem label="Rol">
         <Tag color="green">{{ rol }}</Tag>
       </DescriptionsItem>
@@ -43,5 +50,6 @@ const rol = computed(() => userInfo.value?.roles?.[0] ?? '—');
         {{ userInfo?.homePath ?? '—' }}
       </DescriptionsItem>
     </Descriptions>
+    </Spin>
   </Card>
 </template>

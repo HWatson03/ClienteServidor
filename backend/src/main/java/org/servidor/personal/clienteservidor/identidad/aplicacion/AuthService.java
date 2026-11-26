@@ -41,6 +41,7 @@ public class AuthService {
     private final ArchivoRepository archivoRepository;
     private final PersonaRepository personaRepository;
     private final SolicitudUsuarioRepository solicitudUsuarioRepository;
+    private final TokenService tokenService;
 
 
 
@@ -236,6 +237,11 @@ public class AuthService {
     public Usuario obtenerUsuario(String nombreUsuario) {
         return usuarioRepository.findByNombreUsuarioIgnoreCase(nombreUsuario.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+    }
+
+    @Transactional(readOnly = true)
+    public String usuarioDeToken(String token) {
+        return tokenService.validarToken(token).map(Usuario::getNombreUsuario).orElse(null);
     }
 
     @Transactional(readOnly = true)

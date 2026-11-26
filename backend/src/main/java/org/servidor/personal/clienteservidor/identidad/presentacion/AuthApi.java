@@ -66,7 +66,48 @@ public class AuthApi {
     @PostMapping("/refresh") @ResponseStatus(HttpStatus.NO_CONTENT) public void refresh(@RequestHeader(value = "Authorization", required = false) String authorization) { authService.refresh(extraerToken(authorization)); }
     @GetMapping("/me") public UsuarioActualResponse yo() {
         Usuario usuario = authService.obtenerUsuario(autenticacionUtil.nombreUsuarioAutenticado());
-        return new UsuarioActualResponse(usuario.getIdUsuario(), usuario.getNombreUsuario(), usuario.getRol());
+        Persona p = usuario.getPersona();
+        return new UsuarioActualResponse(usuario.getIdUsuario(), usuario.getNombreUsuario(), usuario.getRol(),
+                p == null ? null : p.getNombres(), p == null ? null : p.getApellidoPaterno(),
+                p == null ? null : p.getApellidoMaterno(), p == null ? null : p.getCi(),
+                p == null ? null : p.getCorreo(), p == null ? null : p.getTelefono());
+    }
+    @PutMapping("/me/foto")
+    public Map<String, String> actualizarFotoPerfil(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        if (file.isEmpty() || file.getSize() > 5_000_000) throw new IllegalArgumentException("La imagen debe pesar hasta 5 MB");
+        String tipo = file.getContentType();
+        if (tipo == null || !List.of("image/jpeg", "image/png", "image/webp").contains(tipo)) {
+            throw new IllegalArgumentException("Usa una imagen JPG, PNG o WebP");
+        }
+        Usuario usuario = authService.obtenerUsuario(autenticacionUtil.nombreUsuarioAutenticado());
+        String extension = switch (tipo) { case "image/jpeg" -> ".jpg"; case "image/png" -> ".png"; default -> ".webp"; };
+        Path directorio = Path.of("uploads", "perfiles").toAbsolutePath().normalize();
+        Files.createDirectories(directorio);
+        String nombre = usuario.getIdUsuario() + extension;
+        Path destino = directorio.resolve(nombre).normalize();
+        if (!destino.startsWith(directorio)) throw new IllegalArgumentException("Nombre de archivo inválido");
+        Files.copy(file.getInputStream(), destino, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return Map.of("fotoPerfil", "/api/auth/me/foto?v=" + Files.getLastModifiedTime(destino).toMillis());
+    }
+    @GetMapping("/me/foto")
+    public ResponseEntity<Resource> obtenerFotoPerfil(@RequestParam(required = false) String token) {
+        String usuarioAutenticado = autenticacionUtil.nombreUsuarioAutenticado();
+        if ((usuarioAutenticado == null || usuarioAutenticado.isBlank()) && token != null) {
+            usuarioAutenticado = authService.usuarioDeToken(token);
+        }
+        if (usuarioAutenticado == null || usuarioAutenticado.isBlank()) return ResponseEntity.notFound().build();
+        Usuario usuario = authService.obtenerUsuario(usuarioAutenticado);
+        Path directorio = Path.of("uploads", "perfiles").toAbsolutePath().normalize();
+        for (String extension : List.of(".jpg", ".png", ".webp")) {
+            Path foto = directorio.resolve(usuario.getIdUsuario() + extension);
+            if (Files.isRegularFile(foto)) {
+                try {
+                    String tipo = extension.equals(".jpg") ? "image/jpeg" : extension.equals(".png") ? "image/png" : "image/webp";
+                    return ResponseEntity.ok().contentType(MediaType.parseMediaType(tipo)).body(new FileSystemResource(foto));
+                } catch (Exception ignored) { return ResponseEntity.notFound().build(); }
+            }
+        }
+        return ResponseEntity.notFound().build();
     }
     @GetMapping("/admin/usuarios") public List<UsuarioResponse> listarUsuarios() {
         return authService.listarUsuarios().stream()
@@ -196,7 +237,8 @@ public class AuthApi {
                         .filename(archivo.getNombreVisible(), StandardCharsets.UTF_8).build().toString())
                 .body(new FileSystemResource(ruta));
     }
-    public record UsuarioActualResponse(Long idUsuario, String nombreUsuario, String rol) {}
+    public record UsuarioActualResponse(Long idUsuario, String nombreUsuario, String rol, String nombres,
+            String apellidoPaterno, String apellidoMaterno, String ci, String correo, String telefono) {}
     public record UsuarioResponse(Long idUsuario, String nombreUsuario, String rol, String estado, Long cuotaMaxBytes,
             String nombres, String apellidoPaterno, String apellidoMaterno, String ci, String correo, String telefono) {}
     public record CrearClienteRequest(String nombres, String apellidoPaterno, String apellidoMaterno, String ci, String correo, String telefono, String nombreUsuario, String contrasena) {}

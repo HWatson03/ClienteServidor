@@ -1,0 +1,282 @@
+:root {
+  --lestrade-ink: #17243b;
+  --lestrade-muted: #738198;
+  --lestrade-line: #e4eaf2;
+  --lestrade-canvas: #f3f6fb;
+  --lestrade-blue: #1769e8;
+  --lestrade-teal: #0d9c8c;
+}
+
+.dark {
+  --lestrade-ink: #e8edf6;
+  --lestrade-muted: #a6b1c3;
+  --lestrade-line: #343e4e;
+  --lestrade-canvas: #151a23;
+}
+
+html,
+body,
+#app {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  color: var(--lestrade-ink);
+  background: var(--lestrade-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Workspace canvas and shared controls */
+.bg-background-deep {
+  background-color: var(--lestrade-canvas);
+}
+
+.ant-btn {
+  min-height: 36px;
+  border-radius: 9px;
+  font-weight: 550;
+  box-shadow: none;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.ant-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.ant-btn-primary {
+  box-shadow: 0 5px 13px rgb(23 105 232 / 18%);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector {
+  border-radius: 9px !important;
+}
+
+.admin-panel,
+.client-files,
+.system-logs {
+  min-width: 0;
+  color: var(--lestrade-ink);
+}
+
+.admin-panel .ant-card,
+.client-files .ant-card,
+.system-logs .ant-card {
+  border: 1px solid var(--lestrade-line);
+  border-radius: 15px;
+  box-shadow: 0 5px 18px rgb(23 36 59 / 4%);
+}
+
+.admin-panel > .mb-4.grid > .ant-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 132px;
+  background: linear-gradient(135deg, #fff 55%, var(--stat-tint, #edf4ff));
+}
+
+.dark .admin-panel > .mb-4.grid > .ant-card {
+  background: linear-gradient(135deg, #202630 55%, var(--stat-tint, #202f4b));
+}
+
+.dark .admin-panel > .mb-4.grid > .admin-stat--clients { --stat-tint: #202f4b; --stat-icon: #5c9bff; }
+.dark .admin-panel > .mb-4.grid > .admin-stat--usage { --stat-tint: #183b39; --stat-icon: #2ad1b2; }
+.dark .admin-panel > .mb-4.grid > .admin-stat--server { --stat-tint: #302b48; --stat-icon: #aa97ff; }
+.dark .admin-panel > .mb-4.grid > .admin-stat--quota { --stat-tint: #453621; --stat-icon: #ffc05d; }
+
+.admin-panel > .mb-4.grid > .ant-card::after {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  content: '';
+  background: var(--stat-icon, #1769e8);
+  border-radius: 12px;
+  opacity: .1;
+}
+
+.admin-panel > .mb-4.grid > .admin-stat--clients { --stat-tint: #edf4ff; --stat-icon: #1769e8; }
+.admin-panel > .mb-4.grid > .admin-stat--usage { --stat-tint: #e9fbf7; --stat-icon: #0d9c8c; }
+.admin-panel > .mb-4.grid > .admin-stat--server { --stat-tint: #f1efff; --stat-icon: #7356d8; }
+.admin-panel > .mb-4.grid > .admin-stat--quota { --stat-tint: #fff6e7; --stat-icon: #d88a16; }
+
+.admin-stat__label {
+  color: #64738a;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.admin-stat__value {
+  margin-top: 9px;
+  color: #17243b;
+  font-size: clamp(23px, 2vw, 29px);
+  font-weight: 720;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+}
+
+.dark .admin-stat__value { color: #f1f5fb; }
+
+.admin-stat__hint {
+  margin-top: 8px;
+  color: #8793a6;
+  font-size: 12px;
+}
+
+.admin-panel > .ant-card,
+.admin-panel .mt-4.ant-card,
+.admin-panel .mt-4.grid > .ant-card {
+  margin-bottom: 16px;
+}
+
+.admin-panel .ant-card-head {
+  min-height: 58px;
+  border-bottom-color: #edf1f6;
+}
+
+.admin-panel .ant-card-head-title {
+  color: #1d2d46;
+  font-weight: 680;
+}
+
+.dark .admin-panel .ant-card-head-title { color: #e9eef7; }
+
+.admin-panel .ant-table-wrapper,
+.system-logs .ant-table-wrapper {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e9eef5;
+  border-radius: 11px;
+}
+
+.admin-panel .ant-table-thead > tr > th,
+.system-logs .ant-table-thead > tr > th {
+  color: #61718a;
+  background: #f6f8fc;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dark .admin-panel .ant-table-wrapper,
+.dark .system-logs .ant-table-wrapper { border-color: #343e4e; }
+
+.dark .admin-panel .ant-table-thead > tr > th,
+.dark .system-logs .ant-table-thead > tr > th {
+  color: #b3bfd1;
+  background: #202735;
+}
+
+.dark .admin-panel .ant-table-tbody > tr > td,
+.dark .system-logs .ant-table-tbody > tr > td { border-bottom-color: #343e4e; }
+
+.admin-panel .ant-table-tbody > tr > td,
+.system-logs .ant-table-tbody > tr > td {
+  border-bottom-color: #edf1f6;
+}
+
+.admin-panel .space-y-3 > .ant-card,
+.admin-panel .space-y-2 > .ant-card {
+  background: #fff;
+}
+
+.dark .admin-panel .space-y-3 > .ant-card,
+.dark .admin-panel .space-y-2 > .ant-card { background: #202630; }
+
+.client-files .client-toolbar {
+  background: linear-gradient(115deg, #fff 58%, #edf5ff);
+}
+
+.dark .client-files .client-toolbar {
+  background: linear-gradient(115deg, #202630 58%, #1c2c45);
+}
+
+.client-files .quota-card {
+  color: #fff;
+  background: linear-gradient(135deg, #155bd5, #1783ef 66%, #18a9b1);
+  border: 0;
+  box-shadow: 0 12px 26px rgb(23 105 232 / 19%);
+}
+
+.client-files .quota-card .text-muted-foreground,
+.client-files .quota-card .ant-progress-text {
+  color: rgb(255 255 255 / 82%);
+}
+
+.client-files .quota-card .ant-progress-inner {
+  background: rgb(255 255 255 / 24%);
+}
+
+.client-files .quota-card .ant-progress-bg {
+  background: #fff;
+}
+
+.client-files .file-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #1769e8;
+  background: #eaf2ff;
+  border-radius: 11px;
+}
+
+.client-files .folder-icon {
+  color: #b7780c;
+  background: #fff3d9;
+}
+
+.client-files .mobile-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  background: hsl(var(--card));
+  border: 1px solid var(--lestrade-line);
+  border-radius: 13px;
+}
+
+.dark .client-files .file-icon { color: #83b4ff; background: #253a5b; }
+.dark .client-files .folder-icon { color: #f6c76a; background: #493d25; }
+
+.client-files .ant-empty {
+  padding: 40px 12px;
+}
+
+.system-logs .log-entry {
+  border-left: 3px solid #8ca0bc;
+}
+
+.system-logs .log-entry--error { border-left-color: #e34c5b; }
+.system-logs .log-entry--warn { border-left-color: #e5a326; }
+.system-logs .log-entry--info { border-left-color: #2382e8; }
+
+.dark .admin-panel .ant-table-tbody > tr:hover > td,
+.dark .system-logs .ant-table-tbody > tr:hover > td { background: #293243 !important; }
+
+@media (max-width: 767px) {
+  .ant-btn:not(.ant-btn-sm) {
+    min-height: 42px;
+  }
+
+  .admin-panel > .mb-4.grid > .ant-card {
+    min-height: 116px;
+  }
+
+  .admin-panel .ant-card-body,
+  .client-files .ant-card-body,
+  .system-logs .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}

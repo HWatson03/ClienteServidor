@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
 import { Button, Card, Form, FormItem, Input, Modal, Table, Tag, message, Progress, Drawer, Empty, Spin, Alert } from 'ant-design-vue';
+import LestradeIcon from '#/components/lestrade-icon.vue';
 
 import { actualizarCliente, administrarCliente, crearUsuario, descargarArchivoCliente, explorarCliente, listarActividadAdmin, listarHistorialAlmacenamiento, listarPapeleraCliente, listarSesionesAdmin, listarSesionesCliente, listarUsuarios, obtenerEspacioServidor, obtenerResumenAlmacenamiento, listarSolicitudes, aprobarSolicitud, rechazarSolicitud, type ActividadAdmin, type ArchivoCliente, type ContenidoCliente, type EspacioServidor, type ItemPapelera, type ResumenAlmacenamiento, type SesionAdmin, type SnapshotAlmacenamiento, type Usuario, type SolicitudUsuario } from '#/api/usuarios';
 
@@ -292,18 +293,21 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
 
 <template>
   <Page title="Panel administrativo" description="Uso de almacenamiento y archivos por cliente.">
-    <div class="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Card><div class="text-sm text-muted-foreground">Clientes activos</div><div class="mt-2 text-2xl font-semibold">{{ clientesActivos }}</div></Card>
-      <Card><div class="text-sm text-muted-foreground">Espacio utilizado por clientes</div><div class="mt-2 text-2xl font-semibold">{{ formatoBytes(espacioUsado) }}</div></Card>
-      <Card>
-        <div class="flex justify-between text-sm text-muted-foreground"><span>Disco del servidor</span><span>{{ formatoBytes(espacioServidor.disponible) }} libres</span></div>
+    <div class="admin-panel min-w-0">
+    <div class="mb-4 grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <Card class="admin-stat admin-stat--clients"><div class="admin-stat__label"><LestradeIcon name="users" :size="16" class="mr-2 inline text-blue-600" />Clientes activos</div><div class="admin-stat__value">{{ clientesActivos }}</div><div class="admin-stat__hint">Cuentas con acceso habilitado</div></Card>
+      <Card class="admin-stat admin-stat--usage"><div class="admin-stat__label"><LestradeIcon name="cloud" :size="16" class="mr-2 inline text-teal-600" />Espacio de clientes</div><div class="admin-stat__value">{{ formatoBytes(espacioUsado) }}</div><div class="admin-stat__hint">Suma del almacenamiento ocupado</div></Card>
+      <Card class="admin-stat admin-stat--server">
+        <div class="admin-stat__label"><LestradeIcon name="database" :size="16" class="mr-2 inline text-violet-600" />Disco del servidor</div>
+        <div class="admin-stat__value">{{ formatoBytes(espacioServidor.disponible) }} <span class="text-sm font-medium text-muted-foreground">libres</span></div>
         <Progress class="mt-3" :percent="espacioServidor.total ? (espacioServidor.usado / espacioServidor.total) * 100 : 0" :show-info="false" />
-        <div class="text-xs text-muted-foreground">{{ formatoBytes(espacioServidor.usado) }} de {{ formatoBytes(espacioServidor.total) }} usados en el volumen</div>
+        <div class="admin-stat__hint">{{ formatoBytes(espacioServidor.usado) }} de {{ formatoBytes(espacioServidor.total) }} usados</div>
       </Card>
-      <Card>
-        <div class="flex justify-between text-sm text-muted-foreground"><span>Uso de cuotas asignadas</span><span>{{ porcentajeGlobal.toFixed(1) }}%</span></div>
+      <Card class="admin-stat admin-stat--quota">
+        <div class="admin-stat__label"><LestradeIcon name="chart" :size="16" class="mr-2 inline text-amber-600" />Uso de cuotas asignadas</div>
+        <div class="admin-stat__value">{{ porcentajeGlobal.toFixed(1) }}%</div>
         <Progress class="mt-3" :percent="porcentajeGlobal" :show-info="false" />
-        <div class="text-xs text-muted-foreground">{{ formatoBytes(espacioUsado) }} de {{ formatoBytes(cuotaTotal) }}</div>
+        <div class="admin-stat__hint">{{ formatoBytes(espacioUsado) }} de {{ formatoBytes(cuotaTotal) }} asignados</div>
       </Card>
     </div>
     <Alert
@@ -314,15 +318,15 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
       message="Hay alertas de almacenamiento"
       :description="`${resumen.filter((u) => u.limite > 0 && u.ocupados / u.limite >= 0.85).length} cliente(s) superan el 85% de su cuota. Espacio libre del servidor: ${formatoBytes(espacioServidor.disponible)}.`"
     />
-    <Card>
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <Card class="admin-section admin-clients-section">
+      <div class="mb-4 flex min-w-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <div class="text-lg font-semibold">Almacenamiento por cliente</div>
           <div class="text-sm text-muted-foreground">Consulta el espacio utilizado y los archivos de cada cuenta.</div>
         </div>
-        <div class="flex flex-wrap items-center gap-2"><Button @click="copiarEnlaceRegistro">Invitar cliente</Button><Button type="primary" @click="abierto = true">Crear usuario</Button></div>
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"><Button class="min-h-11" @click="copiarEnlaceRegistro">Invitar cliente</Button><Button class="min-h-11" type="primary" @click="abierto = true">Crear usuario</Button></div>
       </div>
-      <Table :columns="columnas" :data-source="resumen" :loading="cargando" row-key="idUsuario">
+      <Table class="hidden" :scroll="{ x: 1050 }" :columns="columnas" :data-source="resumen" :loading="cargando" row-key="idUsuario">
         <template #bodyCell="{ column, record }">
           <span v-if="column.key === 'persona'">{{ [record.nombres, record.apellidoPaterno, record.apellidoMaterno].filter(Boolean).join(' ') || 'Sin persona vinculada' }}<span v-if="record.ci" class="block text-xs text-muted-foreground">CI {{ record.ci }}</span></span>
           <Tag v-if="column.key === 'estado'" :color="record.estado === 'ACTIVO' ? 'green' : 'default'">{{ record.estado }}</Tag>
@@ -342,8 +346,40 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
           </div>
         </template>
       </Table>
+      <div class="admin-client-cards grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+        <Card v-for="cliente in resumen" :key="cliente.idUsuario" size="small">
+          <div class="flex min-w-0 items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="break-words font-semibold">{{ [cliente.nombres, cliente.apellidoPaterno, cliente.apellidoMaterno].filter(Boolean).join(' ') || 'Sin persona vinculada' }}</div>
+              <div class="mt-1 break-all text-sm text-muted-foreground">@{{ cliente.nombreUsuario }}<span v-if="cliente.ci"> · CI {{ cliente.ci }}</span></div>
+            </div>
+            <Tag class="m-0 shrink-0" :color="cliente.estado === 'ACTIVO' ? 'green' : 'default'">{{ cliente.estado }}</Tag>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <div><span class="text-muted-foreground">Cuota</span><div class="font-medium">{{ formatoBytes(cliente.limite) }}</div></div>
+            <div><span class="text-muted-foreground">Ocupado</span><div class="font-medium">{{ formatoBytes(cliente.ocupados) }}</div></div>
+            <div><span class="text-muted-foreground">Archivos</span><div class="font-medium">{{ cliente.cantidadArchivos }}</div></div>
+            <div><span class="text-muted-foreground">Disponible</span><div class="font-medium">{{ formatoBytes(cliente.disponibles) }}</div></div>
+          </div>
+          <div class="mt-3 min-w-0">
+            <div class="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>Uso de cuota</span>
+              <span class="shrink-0 tabular-nums">{{ cliente.limite ? ((cliente.ocupados / cliente.limite) * 100).toFixed(1) : '0.0' }}%</span>
+            </div>
+            <Progress class="admin-client-quota-progress" :percent="cliente.limite ? Math.min(100, (cliente.ocupados / cliente.limite) * 100) : 0" :show-info="false" size="small" />
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <Button class="min-h-11" @click="abrirArchivos(cliente)">Archivos</Button>
+            <Button class="min-h-11" @click="editarAcceso(cliente)">Editar acceso</Button>
+            <Button class="min-h-11" @click="abrirAdministracion(cliente)">Administrar</Button>
+            <Button v-if="cliente.estado === 'ACTIVO'" class="min-h-11" danger @click="cambiarBloqueo(cliente, true)">Bloquear</Button>
+            <Button v-else class="min-h-11" type="primary" @click="cambiarBloqueo(cliente, false)">Reactivar</Button>
+          </div>
+        </Card>
+        <Empty v-if="!cargando && !resumen.length" description="Todavía no hay clientes" />
+      </div>
     </Card>
-    <Modal v-model:open="abierto" title="Crear cliente y vincular persona" :confirm-loading="guardando" ok-text="Crear cuenta cliente" cancel-text="Cancelar" @ok="guardar">
+    <Modal v-model:open="abierto" :width="'min(620px, calc(100vw - 24px))'" :body-style="{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }" title="Crear cliente y vincular persona" :confirm-loading="guardando" ok-text="Crear cuenta cliente" cancel-text="Cancelar" @ok="guardar">
       <Form layout="vertical" class="pt-4">
         <div class="mb-2 font-medium">Datos de la persona</div>
         <div class="grid gap-x-3 md:grid-cols-2">
@@ -359,27 +395,40 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
         <FormItem label="Contraseña" help="Usa al menos 8 caracteres y comparte la clave con el cliente de forma segura."><Input.Password v-model:value="contrasena" autocomplete="new-password" /></FormItem>
       </Form>
     </Modal>
-    <Card class="mt-4"><template #title>Solicitudes de acceso pendientes</template>
-      <Table :columns="[{ title: 'Persona', key: 'persona' }, { title: 'CI', dataIndex: 'ci', key: 'ci' }, { title: 'Correo', dataIndex: 'correo', key: 'correo' }, { title: 'Usuario solicitado', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Fecha', dataIndex: 'fechaSolicitud', key: 'fechaSolicitud' }, { title: 'Revisión', key: 'revision' }]" :data-source="solicitudes" row-key="idSolicitud" :pagination="{ pageSize: 6 }">
+    <Card class="mt-4"><template #title>Solicitudes de acceso pendientes · {{ solicitudes.length }}</template>
+      <Table class="hidden" :scroll="{ x: 820 }" :columns="[{ title: 'Persona', key: 'persona' }, { title: 'CI', dataIndex: 'ci', key: 'ci' }, { title: 'Correo', dataIndex: 'correo', key: 'correo' }, { title: 'Usuario solicitado', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Fecha', dataIndex: 'fechaSolicitud', key: 'fechaSolicitud' }, { title: 'Revisión', key: 'revision' }]" :data-source="solicitudes" row-key="idSolicitud" :pagination="{ pageSize: 6 }">
         <template #bodyCell="{ column, record }"><span v-if="column.key === 'persona'">{{ record.nombres }} {{ record.apellidoPaterno }} {{ record.apellidoMaterno }}</span><span v-else-if="column.key === 'fechaSolicitud'">{{ new Date(record.fechaSolicitud).toLocaleString() }}</span><div v-else-if="column.key === 'revision'" class="flex gap-2"><Button size="small" type="primary" @click="revisarSolicitud(record, true)">Aprobar</Button><Button size="small" danger @click="revisarSolicitud(record, false)">Rechazar</Button></div></template>
       </Table><Empty v-if="!solicitudes.length" description="No hay solicitudes pendientes" />
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <Card v-for="solicitud in solicitudes" :key="solicitud.idSolicitud" size="small">
+          <div class="break-words font-semibold">{{ solicitud.nombres }} {{ solicitud.apellidoPaterno }} {{ solicitud.apellidoMaterno }}</div>
+          <div class="mt-1 break-all text-sm text-muted-foreground">{{ solicitud.correo }}</div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-sm"><span>CI: {{ solicitud.ci }}</span><span>Usuario: {{ solicitud.nombreUsuario }}</span></div>
+          <div class="mt-1 text-xs text-muted-foreground">{{ new Date(solicitud.fechaSolicitud).toLocaleString() }}</div>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <Button class="min-h-11" type="primary" @click="revisarSolicitud(solicitud, true)">Aprobar</Button>
+            <Button class="min-h-11" danger @click="revisarSolicitud(solicitud, false)">Rechazar</Button>
+          </div>
+        </Card>
+      </div>
     </Card>
-    <Modal v-model:open="editarAbierto" :title="`Editar acceso: ${clienteEditando?.nombreUsuario ?? ''}`" :confirm-loading="guardando" ok-text="Guardar cambios" cancel-text="Cancelar" @ok="guardarEdicion">
+    <Modal v-model:open="editarAbierto" :width="'min(520px, calc(100vw - 24px))'" :body-style="{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }" :title="`Editar acceso: ${clienteEditando?.nombreUsuario ?? ''}`" :confirm-loading="guardando" ok-text="Guardar cambios" cancel-text="Cancelar" @ok="guardarEdicion">
       <Form layout="vertical" class="pt-4">
         <FormItem label="Nombre de usuario"><Input v-model:value="nuevoNombre" autocomplete="off" :maxlength="50" /></FormItem>
         <FormItem label="Nueva contraseña" help="Déjala vacía para conservar la contraseña actual. Si la cambias, el cliente cerrará sesión en todos sus dispositivos."><Input.Password v-model:value="nuevaContrasena" autocomplete="new-password" /></FormItem>
       </Form>
     </Modal>
-    <Drawer v-model:open="archivosAbiertos" :title="`Archivos de ${clienteSeleccionado?.nombreUsuario ?? 'cliente'}`" width="720">
+    <Drawer v-model:open="archivosAbiertos" :title="`Archivos de ${clienteSeleccionado?.nombreUsuario ?? 'cliente'}`" width="min(720px, 100vw)">
       <Spin :spinning="cargandoArchivos">
-        <div class="mb-3 flex gap-2">
-          <Button size="small" @click="navegarCarpeta(undefined)">Raíz</Button>
-          <Button size="small" @click="mostrarPapelera">Papelera</Button>
+        <div class="mb-3 grid grid-cols-2 gap-2 sm:flex">
+          <Button class="min-h-11" @click="navegarCarpeta(undefined)">Raíz</Button>
+          <Button class="min-h-11" @click="mostrarPapelera">Papelera</Button>
         </div>
-        <Table v-if="!verPapelera && contenido.carpetas.length" :columns="[{ title: 'Carpetas', dataIndex: 'nombre', key: 'nombre' }, { title: '', key: 'abrir' }]" :data-source="contenido.carpetas" row-key="idCarpeta" :pagination="false">
+        <div class="overflow-x-auto">
+        <Table v-if="!verPapelera && contenido.carpetas.length" :scroll="{ x: 420 }" :columns="[{ title: 'Carpetas', dataIndex: 'nombre', key: 'nombre' }, { title: '', key: 'abrir' }]" :data-source="contenido.carpetas" row-key="idCarpeta" :pagination="false">
           <template #bodyCell="{ column, record }"><Button v-if="column.key === 'abrir'" size="small" @click="navegarCarpeta(record.idCarpeta)">Abrir</Button></template>
         </Table>
-        <Table v-if="!verPapelera && archivos.length" :columns="[
+        <Table v-if="!verPapelera && archivos.length" :scroll="{ x: 520 }" :columns="[
           { title: 'Archivo', dataIndex: 'nombreVisible', key: 'nombreVisible' },
           { title: 'Tamaño', dataIndex: 'tamano', key: 'tamano', width: 120 },
           { title: '', key: 'accion', width: 120 },
@@ -389,41 +438,63 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
             <Button v-else-if="column.key === 'accion'" size="small" @click="clienteSeleccionado && descargar(clienteSeleccionado, record)">Descargar</Button>
           </template>
         </Table>
-        <Table v-if="verPapelera && papelera.length" :columns="[{ title: 'Tipo', dataIndex: 'tipo', key: 'tipo' }, { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' }, { title: 'Tamaño', dataIndex: 'tamano', key: 'tamano' }]" :data-source="papelera" row-key="id" :pagination="false" />
+        <Table v-if="verPapelera && papelera.length" :scroll="{ x: 520 }" :columns="[{ title: 'Tipo', dataIndex: 'tipo', key: 'tipo' }, { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' }, { title: 'Tamaño', dataIndex: 'tamano', key: 'tamano' }]" :data-source="papelera" row-key="id" :pagination="false" />
+        </div>
         <Empty v-if="!cargandoArchivos && (verPapelera ? !papelera.length : !archivos.length && !contenido.carpetas.length)" :description="verPapelera ? 'La papelera está vacía' : 'Esta carpeta está vacía'" />
       </Spin>
     </Drawer>
     <Card class="mt-4">
       <template #title>Actividad reciente de clientes</template>
-      <Table :columns="[{ title: 'Cliente', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Recurso', dataIndex: 'recurso', key: 'recurso' }, { title: 'Acción', dataIndex: 'accion', key: 'accion' }, { title: 'Tamaño', dataIndex: 'bytes', key: 'bytes' }, { title: 'Fecha', dataIndex: 'ocurridaEn', key: 'ocurridaEn' }]" :data-source="actividad" row-key="ocurridaEn" :pagination="{ pageSize: 8 }">
+      <Table class="hidden" :scroll="{ x: 720 }" :columns="[{ title: 'Cliente', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Recurso', dataIndex: 'recurso', key: 'recurso' }, { title: 'Acción', dataIndex: 'accion', key: 'accion' }, { title: 'Tamaño', dataIndex: 'bytes', key: 'bytes' }, { title: 'Fecha', dataIndex: 'ocurridaEn', key: 'ocurridaEn' }]" :data-source="actividad" row-key="ocurridaEn" :pagination="{ pageSize: 8 }">
         <template #bodyCell="{ column, record }">
           <Tag v-if="column.key === 'accion'" color="blue">{{ record.accion }}</Tag>
           <span v-else-if="column.key === 'bytes'">{{ formatoBytes(record.bytes) }}</span>
           <span v-else-if="column.key === 'ocurridaEn'">{{ new Date(record.ocurridaEn).toLocaleString() }}</span>
         </template>
       </Table>
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <Card v-for="(evento, indice) in actividad.slice(0, 8)" :key="`${evento.ocurridaEn}-${indice}`" size="small">
+          <div class="flex items-start justify-between gap-2"><div class="min-w-0"><div class="font-semibold">@{{ evento.nombreUsuario }}</div><div class="mt-1 break-words text-sm text-muted-foreground">{{ evento.recurso }}</div></div><Tag class="m-0 shrink-0" color="blue">{{ evento.accion }}</Tag></div>
+          <div class="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2 text-xs text-muted-foreground"><span>{{ formatoBytes(evento.bytes) }}</span><span>{{ new Date(evento.ocurridaEn).toLocaleString() }}</span></div>
+        </Card>
+        <Empty v-if="!actividad.length" description="Sin actividad reciente" />
+      </div>
     </Card>
     <div class="mt-4 grid gap-4 xl:grid-cols-2">
       <Card>
         <template #title>Sesiones de clientes activas</template>
-        <Table :columns="[{ title: 'Cliente', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Inicio', dataIndex: 'creadaEn', key: 'creadaEn' }, { title: 'Vence', dataIndex: 'expiraEn', key: 'expiraEn' }]" :data-source="sesionesGlobales" row-key="idSesion" :pagination="{ pageSize: 6 }">
+        <Table class="hidden" :scroll="{ x: 560 }" :columns="[{ title: 'Cliente', dataIndex: 'nombreUsuario', key: 'nombreUsuario' }, { title: 'Inicio', dataIndex: 'creadaEn', key: 'creadaEn' }, { title: 'Vence', dataIndex: 'expiraEn', key: 'expiraEn' }]" :data-source="sesionesGlobales" row-key="idSesion" :pagination="{ pageSize: 6 }">
           <template #bodyCell="{ column, record }"><span v-if="column.key === 'creadaEn' || column.key === 'expiraEn'">{{ new Date(record[column.key]).toLocaleString() }}</span></template>
         </Table>
+        <div class="space-y-2">
+          <Card v-for="sesion in sesionesGlobales.slice(0, 6)" :key="sesion.idSesion" size="small">
+            <div class="font-medium">{{ sesion.nombreUsuario }}</div>
+            <div class="mt-1 text-xs text-muted-foreground">Inicio: {{ new Date(sesion.creadaEn).toLocaleString() }}</div>
+            <div class="text-xs text-muted-foreground">Vence: {{ new Date(sesion.expiraEn).toLocaleString() }}</div>
+          </Card>
+        </div>
         <Empty v-if="!sesionesGlobales.length" description="No hay sesiones activas" />
       </Card>
       <Card>
         <template #title>Historial de almacenamiento</template>
-        <Table :columns="[{ title: 'Fecha', dataIndex: 'capturadoEn', key: 'capturadoEn' }, { title: 'Uso clientes', dataIndex: 'bytesOcupadosClientes', key: 'bytesOcupadosClientes' }, { title: 'Disco usado', key: 'disco' }]" :data-source="historial" row-key="capturadoEn" :pagination="{ pageSize: 6 }">
+        <Table class="hidden" :scroll="{ x: 580 }" :columns="[{ title: 'Fecha', dataIndex: 'capturadoEn', key: 'capturadoEn' }, { title: 'Uso clientes', dataIndex: 'bytesOcupadosClientes', key: 'bytesOcupadosClientes' }, { title: 'Disco usado', key: 'disco' }]" :data-source="historial" row-key="capturadoEn" :pagination="{ pageSize: 6 }">
           <template #bodyCell="{ column, record }">
             <span v-if="column.key === 'capturadoEn'">{{ new Date(record.capturadoEn).toLocaleDateString() }}</span>
             <span v-else-if="column.key === 'bytesOcupadosClientes'">{{ formatoBytes(record.bytesOcupadosClientes) }}</span>
             <span v-else-if="column.key === 'disco'">{{ formatoBytes(record.bytesTotalServidor - record.bytesDisponiblesServidor) }} / {{ formatoBytes(record.bytesTotalServidor) }}</span>
           </template>
         </Table>
+        <div class="space-y-2">
+          <Card v-for="snapshot in historial.slice(0, 6)" :key="snapshot.capturadoEn" size="small">
+            <div class="font-medium">{{ new Date(snapshot.capturadoEn).toLocaleDateString() }}</div>
+            <div class="mt-1 text-sm">Clientes: {{ formatoBytes(snapshot.bytesOcupadosClientes) }}</div>
+            <div class="mt-2"><div class="flex justify-between text-xs text-muted-foreground"><span>Disco del servidor</span><span>{{ formatoBytes(snapshot.bytesTotalServidor - snapshot.bytesDisponiblesServidor) }} / {{ formatoBytes(snapshot.bytesTotalServidor) }}</span></div><Progress :percent="snapshot.bytesTotalServidor ? ((snapshot.bytesTotalServidor - snapshot.bytesDisponiblesServidor) / snapshot.bytesTotalServidor) * 100 : 0" :show-info="false" size="small" /></div>
+          </Card>
+        </div>
         <Empty v-if="!historial.length" description="El historial se inicia con la primera captura diaria" />
       </Card>
     </div>
-    <Modal v-model:open="detalleAbierto" :title="`Administrar ${adminSeleccionado?.nombreUsuario ?? 'cliente'}`" :footer="null">
+    <Modal v-model:open="detalleAbierto" :width="'min(520px, calc(100vw - 24px))'" :body-style="{ maxHeight: 'calc(100dvh - 180px)', overflowY: 'auto' }" :title="`Administrar ${adminSeleccionado?.nombreUsuario ?? 'cliente'}`" :footer="null">
       <Form layout="vertical">
         <FormItem label="Cuota de almacenamiento">
           <div class="rounded-xl border border-border p-4">
@@ -458,5 +529,21 @@ onUnmounted(() => { if (temporizadorSolicitudes) clearInterval(temporizadorSolic
       </div>
       <Empty v-else description="Sin sesiones activas" />
     </Modal>
+    </div>
   </Page>
 </template>
+
+<style scoped>
+.admin-client-quota-progress {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-client-quota-progress :deep(.ant-progress-outer) {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+</style>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
 import { Alert, Button, Card, Empty, Input, Modal, Progress, Spin, Table, Tag, message } from 'ant-design-vue';
+import LestradeIcon from '#/components/lestrade-icon.vue';
 
 import {
   crearCarpetaCliente,
@@ -32,6 +33,10 @@ const inputArchivo = ref<HTMLInputElement | null>(null);
 const archivosPendientes = ref<File[]>([]);
 const confirmarSubidaAbierta = ref(false);
 const tamanoPendiente = computed(() => archivosPendientes.value.reduce((total, archivo) => total + archivo.size, 0));
+const elementos = computed(() => [
+  ...carpetas.value.map((carpeta) => ({ ...carpeta, id: carpeta.idCarpeta, tipoElemento: 'CARPETA' as const })),
+  ...archivos.value.map((archivo) => ({ ...archivo, id: archivo.idArchivo, tipoElemento: 'ARCHIVO' as const })),
+]);
 
 const carpetaActual = computed(() => ruta.value.at(-1));
 const porcentajeCuota = computed(() => cuota.value.limite
@@ -79,6 +84,11 @@ async function iniciar() {
 async function abrirCarpeta(carpeta: any) {
   ruta.value = [...ruta.value, carpeta];
   await cargarContenido();
+}
+
+async function abrirElemento(elemento: any) {
+  if (elemento.tipoElemento === 'CARPETA') await abrirCarpeta(elemento);
+  else await descargar(elemento);
 }
 
 async function volverA(indice: number) {
@@ -154,34 +164,38 @@ onMounted(iniciar);
 
 <template>
   <Page title="Mis archivos" description="Tu espacio personal en la nube.">
-    <div class="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <Card class="rounded-xl">
+    <div class="client-files min-w-0">
+    <div class="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <Card class="client-toolbar rounded-2xl">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div class="text-lg font-semibold">{{ carpetaActual?.nombre ?? 'Mis archivos' }}</div>
-            <div class="text-sm text-muted-foreground">Sube, organiza y descarga tus archivos desde el navegador.</div>
+            <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"><LestradeIcon name="folder-open" size="14" /> ESPACIO PERSONAL</div>
+            <div class="text-xl font-semibold tracking-tight">{{ ruta.length <= 1 ? 'Mi espacio' : carpetaActual?.nombre }}</div>
+            <div class="mt-1 text-sm text-muted-foreground">Tus archivos, organizados y disponibles desde cualquier dispositivo.</div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <Button :disabled="subiendo" @click="abrirNuevaCarpeta = true">Nueva carpeta</Button>
-            <Button type="primary" :loading="subiendo" :disabled="subiendo || cuota.disponibles <= 0" @click="inputArchivo?.click()">{{ subiendo ? 'Subiendo…' : 'Subir archivos' }}</Button>
+          <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+            <Button class="min-h-11" :disabled="subiendo" @click="abrirNuevaCarpeta = true"><LestradeIcon name="folder-plus" size="16" /> Nueva carpeta</Button>
+            <Button class="min-h-11" type="primary" :loading="subiendo" :disabled="subiendo || cuota.disponibles <= 0" @click="inputArchivo?.click()"><LestradeIcon name="upload" size="16" /> {{ subiendo ? 'Subiendo…' : 'Subir archivos' }}</Button>
             <input ref="inputArchivo" class="hidden" type="file" multiple @change="seleccionarArchivos" />
           </div>
         </div>
-        <div v-if="subiendo" class="mt-4 rounded-lg bg-muted/40 p-3">
+        <div v-if="subiendo" class="mt-4 rounded-xl bg-blue-50 p-3">
           <div class="mb-1 flex justify-between text-sm"><span>Subiendo archivo…</span><span>{{ formatoBytes(progreso) }} / {{ formatoBytes(tamanoSubiendo) }}</span></div>
           <Progress :percent="tamanoSubiendo ? Math.round((progreso / tamanoSubiendo) * 100) : 0" />
         </div>
         <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
           <template v-for="(carpeta, indice) in ruta" :key="carpeta.idCarpeta">
-            <button class="text-primary hover:underline" @click="volverA(indice)">{{ indice === 0 ? 'Raíz' : carpeta.nombre }}</button>
+            <button class="text-primary hover:underline" @click="volverA(indice)">{{ indice === 0 ? 'Mi espacio' : carpeta.nombre }}</button>
             <span v-if="indice < ruta.length - 1" class="text-muted-foreground">/</span>
           </template>
         </div>
       </Card>
-      <Card class="rounded-xl">
-        <div class="flex justify-between text-sm"><span>Espacio utilizado</span><span class="font-medium">{{ porcentajeCuota.toFixed(0) }}%</span></div>
+      <Card class="quota-card rounded-2xl">
+        <div class="flex items-center justify-between text-sm"><span class="font-semibold">Almacenamiento</span><span class="rounded-full bg-white/15 px-2.5 py-1 font-semibold">{{ porcentajeCuota.toFixed(0) }}%</span></div>
         <Progress class="mt-2" :percent="porcentajeCuota" :status="porcentajeCuota >= 90 ? 'exception' : 'normal'" />
-        <div class="mt-2 text-sm text-muted-foreground">{{ formatoBytes(cuota.ocupados + cuota.reservados) }} de {{ formatoBytes(cuota.limite) }}</div>
+        <div class="mt-3 text-2xl font-bold tracking-tight">{{ formatoBytes(cuota.ocupados + cuota.reservados) }}</div>
+        <div class="mt-1 text-sm text-muted-foreground">utilizados de {{ formatoBytes(cuota.limite) }}</div>
+        <div class="mt-3 flex items-center justify-between border-t border-white/20 pt-3 text-xs"><span>Disponible</span><strong>{{ formatoBytes(cuota.disponibles) }}</strong></div>
         <Tag v-if="cuota.disponibles <= 0" class="mt-2" color="red">Cuota completa</Tag>
       </Card>
     </div>
@@ -189,6 +203,7 @@ onMounted(iniciar);
     <Card :body-style="{ padding: 0 }" class="overflow-hidden rounded-xl">
       <Spin :spinning="cargando">
         <Table
+          class="hidden lg:block"
           v-if="carpetas.length || archivos.length"
           :columns="[
             { title: 'Nombre', key: 'nombre' },
@@ -196,10 +211,7 @@ onMounted(iniciar);
             { title: 'Tipo', key: 'tipo', width: 160 },
             { title: 'Acción', key: 'accion', width: 150 },
           ]"
-          :data-source="[
-            ...carpetas.map((carpeta) => ({ ...carpeta, id: carpeta.idCarpeta, tipoElemento: 'CARPETA' })),
-            ...archivos.map((archivo) => ({ ...archivo, id: archivo.idArchivo, tipoElemento: 'ARCHIVO' })),
-          ]"
+          :data-source="elementos"
           :pagination="{ pageSize: 20 }"
           :scroll="{ x: 680 }"
           row-key="id"
@@ -207,14 +219,27 @@ onMounted(iniciar);
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'nombre'">
-              <button v-if="record.tipoElemento === 'CARPETA'" class="font-medium text-primary hover:underline" @click="abrirCarpeta(record)">📁 {{ record.nombre }}</button>
-              <span v-else class="font-medium">📄 {{ record.nombreVisible }}</span>
+              <button v-if="record.tipoElemento === 'CARPETA'" class="inline-flex items-center gap-2 font-medium text-primary hover:underline" @click="abrirCarpeta(record)"><span class="file-icon folder-icon"><LestradeIcon name="folder" /></span>{{ record.nombre }}</button>
+              <span v-else class="inline-flex items-center gap-2 font-medium"><span class="file-icon"><LestradeIcon name="file" /></span>{{ record.nombreVisible }}</span>
             </template>
             <span v-else-if="column.key === 'tamano'">{{ record.tipoElemento === 'ARCHIVO' ? formatoBytes(record.tamano) : '—' }}</span>
             <span v-else-if="column.key === 'tipo'">{{ record.tipoElemento === 'CARPETA' ? 'Carpeta' : (record.tipoMime || 'Archivo') }}</span>
-            <Button v-else-if="column.key === 'accion' && record.tipoElemento === 'ARCHIVO'" size="small" @click="descargar(record)">Descargar</Button>
+            <Button v-else-if="column.key === 'accion' && record.tipoElemento === 'ARCHIVO'" size="small" @click="descargar(record)"><LestradeIcon name="download" size="15" /> Descargar</Button>
           </template>
         </Table>
+        <div v-if="elementos.length" class="space-y-2 p-3 lg:hidden">
+          <div v-for="elemento in elementos" :key="elemento.id" class="mobile-file">
+            <span class="file-icon" :class="elemento.tipoElemento === 'CARPETA' ? 'folder-icon' : ''">
+              <LestradeIcon v-if="elemento.tipoElemento === 'CARPETA'" name="folder" />
+              <LestradeIcon v-else name="file" />
+            </span>
+            <button class="min-w-0 flex-1 text-left" @click="abrirElemento(elemento)">
+              <span class="block truncate text-sm font-semibold">{{ elemento.tipoElemento === 'CARPETA' ? elemento.nombre : elemento.nombreVisible }}</span>
+              <span class="mt-1 block truncate text-xs text-muted-foreground">{{ elemento.tipoElemento === 'CARPETA' ? 'Carpeta · Abrir' : `${elemento.tipoMime || 'Archivo'} · ${formatoBytes(elemento.tamano)}` }}</span>
+            </button>
+            <Button v-if="elemento.tipoElemento === 'ARCHIVO'" class="shrink-0" shape="circle" aria-label="Descargar archivo" @click="descargar(elemento)"><LestradeIcon name="download" size="16" /></Button>
+          </div>
+        </div>
         <Empty v-else-if="!cargando" description="Esta carpeta está vacía. Sube un archivo o crea una carpeta para empezar." class="py-12" />
       </Spin>
     </Card>
@@ -228,5 +253,6 @@ onMounted(iniciar);
       <Alert v-if="tamanoPendiente > cuota.disponibles" type="warning" show-icon message="La selección supera el espacio disponible." />
       <ul class="mt-3 max-h-40 overflow-auto text-sm"><li v-for="archivo in archivosPendientes" :key="`${archivo.name}-${archivo.lastModified}`">{{ archivo.name }} · {{ formatoBytes(archivo.size) }}</li></ul>
     </Modal>
+    </div>
   </Page>
 </template>
